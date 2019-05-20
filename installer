@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-"~"/.docker-devbox}"
+DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-$HOME/.docker-devbox}"
 
 if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
   echo "## Updating docker-devbox"
@@ -10,14 +10,14 @@ else
 fi
 
 echo "## Installing SmartCD"
-cd /tmp && rm -Rf smartcd && git clone https://github.com/gfi-centre-ouest/smartcd.git && cd smartcd && make install && source load_smartcd && rm -Rf smartcd && cd ~
+cd /tmp && rm -Rf smartcd && git clone https://github.com/gfi-centre-ouest/smartcd.git && cd smartcd && make install && source load_smartcd && rm -Rf smartcd && cd $HOME
 
 if [ ! -f $HOME/.smartcd_config ]; then
     cat << EOF > $HOME/.smartcd_config
     # Load and configure smartcd
-    source ~/.smartcd/lib/core/arrays
-    source ~/.smartcd/lib/core/varstash
-    source ~/.smartcd/lib/core/smartcd
+    source $HOME/.smartcd/lib/core/arrays
+    source $HOME/.smartcd/lib/core/varstash
+    source $HOME/.smartcd/lib/core/smartcd
     # smartcd setup chpwd-hook
     smartcd setup cd
     smartcd setup pushd
@@ -45,11 +45,11 @@ if [ "$BASHRC_CONFIGURED" != "0" ]; then
     echo "SmartCD registered (~/.bashrc)"
 fi
 
-source ~/.smartcd_config
+source $HOME/.smartcd_config
 
 docker network create reverse-proxy || true
 
-cd "${DOCKER_DEVBOX_HOME}"/traefik && dc down --remove-orphans && dc up -d && cd ~
-#cd "${DOCKER_DEVBOX_HOME}"/nginx-proxy && dc down --remove-orphans && dc up -d && cd ~
-cd "${DOCKER_DEVBOX_HOME}"/portainer && dc down --remove-orphans && dc up -d && cd ~
-#cd "${DOCKER_DEVBOX_HOME}"/cfssl && dc down --remove-orphans && dc up -d && cd ~
+cd "${DOCKER_DEVBOX_HOME}"/traefik && dc down --remove-orphans && dc up -d && cd $HOME
+#cd "${DOCKER_DEVBOX_HOME}"/nginx-proxy && dc down --remove-orphans && dc up -d && cd $HOME
+cd "${DOCKER_DEVBOX_HOME}"/portainer && dc down --remove-orphans && dc up -d && cd $HOME
+#cd "${DOCKER_DEVBOX_HOME}"/cfssl && dc down --remove-orphans && dc up -d && cd $HOME
