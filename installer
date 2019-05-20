@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-$HOME/.docker-devbox}"
 
 if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
@@ -49,7 +50,7 @@ source $HOME/.smartcd_config
 
 docker network create reverse-proxy || true
 
+cd "${DOCKER_DEVBOX_HOME}"/cfssl && dc down --remove-orphans && dc up -d && sleep 10 && install-cfssl-ca && cd $HOME
 cd "${DOCKER_DEVBOX_HOME}"/traefik && dc down --remove-orphans && dc up -d && cd $HOME
 #cd "${DOCKER_DEVBOX_HOME}"/nginx-proxy && dc down --remove-orphans && dc up -d && cd $HOME
 cd "${DOCKER_DEVBOX_HOME}"/portainer && dc down --remove-orphans && dc up -d && cd $HOME
-#cd "${DOCKER_DEVBOX_HOME}"/cfssl && dc down --remove-orphans && dc up -d && cd $HOME
