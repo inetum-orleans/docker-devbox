@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-"~"/.docker-devbox}"
+
+if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
+  echo "## Updating docker-devbox"
+  git -C "${DOCKER_DEVBOX_HOME}" fetch --recurse-submodules && git -C "${DOCKER_DEVBOX_HOME}" reset --hard
+else
+  echo "## Cloning Docker Devbox"
+  git clone --recurse-submodules https://github.com/gfi-centre-ouest/docker-devbox "${DOCKER_DEVBOX_HOME}"
+fi
+
+echo "## Installing SmartCD"
+cd /tmp && rm -Rf smartcd && git clone https://github.com/gfi-centre-ouest/smartcd.git && cd smartcd && make install && source load_smartcd && rm -Rf smartcd && cd ~
+
+if [ ! -f $HOME/.smartcd_config ]; then
+    cat << EOF > $HOME/.smartcd_config
+    # Load and configure smartcd
+    source ~/.smartcd/lib/core/arrays
+    source ~/.smartcd/lib/core/varstash
+    source ~/.smartcd/lib/core/smartcd
+    # smartcd setup chpwd-hook
+    smartcd setup cd
+    smartcd setup pushd
+    smartcd setup popd
+    # smartcd setup prompt-hook
+    # smartcd setup exit-hook
+    smartcd setup completion
+    # VARSTASH_AUTOCONFIGURE=1
+    # VARSTASH_AUTOEDIT=1
+    # SMARTCD_NO_INODE=1
+    # SMARTCD_AUTOMIGRATE=1
+    SMARTCD_LEGACY=1
+    SMARTCD_QUIET=1
+    # VARSTASH_QUIET=1
+EOF
+    echo "SmartCD configuration file has been written (~/.smartcd_config)"
+fi
+
+cat $HOME/.bashrc | grep .smartcd_config
+BASHRC_CONFIGURED=$?
+if [ "$BASHRC_CONFIGURED" != "0" ]; then
+    echo -e>>$HOME/.bashrc
+    echo "# SmartCD Configuration">>$HOME/.bashrc
+    echo '[ -r "$HOME/.smartcd_config" ] && ( [ -n $BASH_VERSION ] || [ -n $ZSH_VERSION ] ) && source ~/.smartcd_config'>>$HOME/.bashrc
+    echo "SmartCD registered (~/.bashrc)"
+fi
+
+source ~/.smartcd_config
+
+docker network create reverse-proxy || true
+
+cd "${DOCKER_DEVBOX_HOME}"/traefik && dc down --remove-orphans && dc up -d && cd ~
+#cd "${DOCKER_DEVBOX_HOME}"/nginx-proxy && dc down --remove-orphans && dc up -d && cd ~
+cd "${DOCKER_DEVBOX_HOME}"/portainer && dc down --remove-orphans && dc up -d && cd ~
+#cd "${DOCKER_DEVBOX_HOME}"/cfssl && dc down --remove-orphans && dc up -d && cd ~

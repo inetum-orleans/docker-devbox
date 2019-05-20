@@ -1,0 +1,15 @@
+[submodule "portainer"]
+	path = portainer
+	url = https://github.com/gfi-centre-ouest/docker-devbox-portainer
+[submodule "nginx-proxy"]
+	path = nginx-proxy
+	url = https://github.com/gfi-centre-ouest/docker-devbox-nginx-proxy
+[submodule "traefik"]
+	path = traefik
+	url = https://github.com/gfi-centre-ouest/docker-devbox-traefik
+[submodule "scripts"]
+	path = scripts
+	url = https://github.com/gfi-centre-ouest/docker-devbox-scripts
+[submodule "cfssl"]
+	path = cfssl
+	url = https://github.com/gfi-centre-ouest/docker-devbox-cfssl.git
