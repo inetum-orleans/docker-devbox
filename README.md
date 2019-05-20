@@ -3,8 +3,9 @@ docker-devbox
 
 Docker Devbox is a set of tools build on top of Docker that automates your environments for web applications development.
 
-It runs natively on any Linux, but [docker-devbox-vagrant](https://github.com/gfi-centre-ouest/docker-devbox-vagrant) 
-is available to setup ready-to-use bash for Windows and MacOS users.
+It runs natively on any Linux, but Windows and MacOS users may use 
+[docker-devbox-vagrant](https://github.com/gfi-centre-ouest/docker-devbox-vagrant) to setup a ready-to-use 
+Docker Devbox inside a Vagrant managed VirtualBox VM based on Ubuntu Server.
 
 # Requirements
 
@@ -20,6 +21,18 @@ is available to setup ready-to-use bash for Windows and MacOS users.
 
 ```
 curl -L https://github.com/gfi-centre-ouest/docker-devbox/raw/master/installer | bash
+```
+
+Then, you need to setup your system for `*.test` domains to be resolved as docker host IP.
+
+```
+sudo apt-get install -y dnsmasq resolvconf
+
+DOCKER_HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
+echo "DOCKER_HOST_IP=$DOCKER_HOST_IP" 
+sudo sh -c "echo address=/.test/$DOCKER_HOST_IP>/etc/dnsmasq.d/test-domain-to-docker-host-ip"
+
+sudo service dnsmasq restart
 ```
 
 # Optional
