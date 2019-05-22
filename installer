@@ -4,7 +4,7 @@ DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-$HOME/.docker-devbox}"
 
 if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
   echo "## Updating docker-devbox"
-  git -C "${DOCKER_DEVBOX_HOME}" fetch --recurse-submodules && git -C "${DOCKER_DEVBOX_HOME}" reset --hard
+  git -C "${DOCKER_DEVBOX_HOME}" fetch --recurse-submodules && git -C "${DOCKER_DEVBOX_HOME}" reset --hard --recurse-submodules
 else
   echo "## Cloning Docker Devbox"
   git clone --recurse-submodules https://github.com/gfi-centre-ouest/docker-devbox "${DOCKER_DEVBOX_HOME}"
