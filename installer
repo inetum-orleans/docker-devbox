@@ -55,9 +55,11 @@ cd "${DOCKER_DEVBOX_HOME}"/portainer && dc down --remove-orphans && dc up -d && 
 
 if [[ -z DOCKER_DEVBOX_USE_NGINX_PROXY ]]
 then
-  cd "${DOCKER_DEVBOX_HOME}"/traefik && dc down --remove-orphans && cd $HOME
-  cd "${DOCKER_DEVBOX_HOME}"/nginx-proxy && dc down --remove-orphans && dc up -d && cd $HOME
-else
+  echo "Use traefik as reverse proxy"
   cd "${DOCKER_DEVBOX_HOME}"/nginx-proxy && dc down --remove-orphans
   cd "${DOCKER_DEVBOX_HOME}"/traefik && dc down --remove-orphans && dc up -d && cd $HOME
+else
+  echo "Use nginx-proxy as reverse proxy"
+  cd "${DOCKER_DEVBOX_HOME}"/traefik && dc down --remove-orphans && cd $HOME
+  cd "${DOCKER_DEVBOX_HOME}"/nginx-proxy && dc down --remove-orphans && dc up -d && cd $HOME
 fi
