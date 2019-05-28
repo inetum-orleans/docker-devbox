@@ -100,3 +100,5 @@ sudo mv ./mkcert /usr/local/bin/mkcert
 
 sudo chmod +x /usr/local/bin/mkcert
 ```
+
+# Quick migration from previous version

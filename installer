@@ -48,9 +48,16 @@ fi
 
 source $HOME/.smartcd_config
 
-docker network create ${DOCKER_DEVBOX_REVERSE_PROXY_NETWORK:-reverse-proxy} || true
+docker network create ${DOCKER_DEVBOX_REVERSE_PROXY_NETWORK-reverse-proxy} || true
 
 cd "${DOCKER_DEVBOX_HOME}"/cfssl && dc down --remove-orphans && dc up -d && sleep 10 && install-cfssl-ca && cd $HOME
-cd "${DOCKER_DEVBOX_HOME}"/traefik && dc down --remove-orphans && dc up -d && cd $HOME
-#cd "${DOCKER_DEVBOX_HOME}"/nginx-proxy && dc down --remove-orphans && dc up -d && cd $HOME
 cd "${DOCKER_DEVBOX_HOME}"/portainer && dc down --remove-orphans && dc up -d && cd $HOME
+
+if [[ -z DOCKER_DEVBOX_USE_NGINX_PROXY ]]
+then
+  cd "${DOCKER_DEVBOX_HOME}"/traefik && dc down --remove-orphans && cd $HOME
+  cd "${DOCKER_DEVBOX_HOME}"/nginx-proxy && dc down --remove-orphans && dc up -d && cd $HOME
+else
+  cd "${DOCKER_DEVBOX_HOME}"/nginx-proxy && dc down --remove-orphans
+  cd "${DOCKER_DEVBOX_HOME}"/traefik && dc down --remove-orphans && dc up -d && cd $HOME
+fi
