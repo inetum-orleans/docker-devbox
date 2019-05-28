@@ -68,10 +68,11 @@ ln -fs ~/.docker-devbox/certs ~/.nginx-proxy/certs
 ln -fs ~/.docker-devbox/nginx-proxy/vhost.d ~/.nginx-proxy/vhost.d
 ```
 
-Migrated a project using docker-devbox-generator > 1.4
-------------------------------------------------------
+Migrate a project using docker-devbox-generator > 1.4
+-----------------------------------------------------
 
-This is guideline to migrate a project with a manually created template or with docker-devbox-generator
+This is guideline to migrate a project created from a manual template or with 
+[generator-docker-devbox](https://github.com/gfi-centre-ouest/generator-docker-devbox) < 1.4
 
 - Run [generator-docker-devbox](https://github.com/gfi-centre-ouest/generator-docker-devbox) inside the project 
 directory. You should choose features that match your existing environment.
@@ -154,8 +155,9 @@ services:
 - Run `cd .` to reload the environment or run `source .bash_enter`.
 
 - If `.bash_enter` was defining aliases for commands like `php`, `composer`, `npm`, you should create equivalent 
-scripts into `.bin` directory. You may play with generator-docker-devbox by generating dummy projects to see how 
-`.bin` script can be written.
+scripts into `.bin` directory. You may play with 
+[generator-docker-devbox](https://github.com/gfi-centre-ouest/generator-docker-devbox) by generating dummy projects to 
+see how `.bin` script are written.
 
 Here's the `npm` command as an example, replace `{{instance.name}}` with the service name (i.e `node`). 
 `_docker_workdir` function can help to map the current working directory into the container.
