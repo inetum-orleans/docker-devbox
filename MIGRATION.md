@@ -168,3 +168,6 @@ Here's the `npm` command as an example, replace `{{instance.name}}` with the ser
 
 run --workdir="$(_docker_workdir "/app")" --entrypoint npm {{instance.name}} "$@"
 ```
+
+- In `.bin` directory, replace `_docker_devbox_map_workdir` with `_docker_workdir` and 
+`$DOCKER_DEVBOX_DIR` with `$DOCKER_DEVBOX_SCRIPTS_PATH`.
