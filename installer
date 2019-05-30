@@ -1,65 +1,151 @@
 #!/usr/bin/env bash
 
 DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-$HOME/.docker-devbox}"
+_LOG="${DOCKER_DEVBOX_HOME}/docker-devbox-installer.log"
+echo "Install Docker Devbox (log file: $_LOG)" 2>&1 |& tee "$_LOG"
 
-if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
-  echo "## Updating docker-devbox"
-  git -C "${DOCKER_DEVBOX_HOME}" fetch --recurse-submodules && git -C "${DOCKER_DEVBOX_HOME}" reset --hard --recurse-submodules
+export DOCKER_DEVBOX_REVERSE_PROXY_NETWORK="${DOCKER_DEVBOX_REVERSE_PROXY_NETWORK:-reverse-proxy}"
+
+if [[ -z "${DOCKER_DEVBOX_DISABLE_CLONE}" ]]; then
+    if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
+      echo "Update Docker Devbox" 2>&1 |& tee -a "$_LOG"
+      git -C "${DOCKER_DEVBOX_HOME}" fetch --recurse-submodules &>> "$_LOG"
+      git -C "${DOCKER_DEVBOX_HOME}" reset --hard --recurse-submodules &>> "$_LOG"
+    else
+      echo "Install Docker Devbox" 2>&1 |& tee -a "$_LOG"
+      git clone --recurse-submodules https://github.com/gfi-centre-ouest/docker-devbox "${DOCKER_DEVBOX_HOME}"
+    fi
 else
-  echo "## Cloning Docker Devbox"
-  git clone --recurse-submodules https://github.com/gfi-centre-ouest/docker-devbox "${DOCKER_DEVBOX_HOME}"
+    echo "Docker Devbox clone is disabled" 2>&1 |& tee -a "$_LOG"
 fi
 
-echo "## Installing SmartCD"
-cd /tmp && rm -Rf smartcd && git clone https://github.com/gfi-centre-ouest/smartcd.git && cd smartcd && make install && source load_smartcd && rm -Rf smartcd && cd $HOME
+echo "Create $DOCKER_DEVBOX_REVERSE_PROXY_NETWORK docker network" 2>&1 |& tee -a "$_LOG"
+docker network create "$DOCKER_DEVBOX_REVERSE_PROXY_NETWORK" &>> "$_LOG" || true
 
-if [ ! -f $HOME/.smartcd_config ]; then
-    cat << EOF > $HOME/.smartcd_config
-    # Load and configure smartcd
-    source $HOME/.smartcd/lib/core/arrays
-    source $HOME/.smartcd/lib/core/varstash
-    source $HOME/.smartcd/lib/core/smartcd
-    # smartcd setup chpwd-hook
-    smartcd setup cd
-    smartcd setup pushd
-    smartcd setup popd
-    # smartcd setup prompt-hook
-    # smartcd setup exit-hook
-    smartcd setup completion
-    # VARSTASH_AUTOCONFIGURE=1
-    # VARSTASH_AUTOEDIT=1
-    # SMARTCD_NO_INODE=1
-    # SMARTCD_AUTOMIGRATE=1
-    SMARTCD_LEGACY=1
-    SMARTCD_QUIET=1
-    # VARSTASH_QUIET=1
+if [[ -z "${DOCKER_DEVBOX_MINIMAL}" ]]; then
+    if [[ -z "${DOCKER_DEVBOX_DISABLE_SMARTCD}" ]]; then
+        echo "Install SmartCD" 2>&1 |& tee -a "$_LOG"
+        cd /tmp &>> "$_LOG"
+        rm -Rf smartcd &>> "$_LOG"
+        git clone https://github.com/gfi-centre-ouest/smartcd.git &>> "$_LOG"
+        cd smartcd &>> "$_LOG"
+        make install &>> "$_LOG"
+        source load_smartcd &>> "$_LOG"
+        rm -Rf smartcd &>> "$_LOG"
+        cd $HOME &>> "$_LOG"
+
+        if [[ ! -f "$HOME/.smartcd_config" ]]; then
+            cat << 'EOF' > $HOME/.smartcd_config
+# Load and configure smartcd
+source $HOME/.smartcd/lib/core/arrays
+source $HOME/.smartcd/lib/core/varstash
+source $HOME/.smartcd/lib/core/smartcd
+# smartcd setup chpwd-hook
+smartcd setup cd
+smartcd setup pushd
+smartcd setup popd
+# smartcd setup prompt-hook
+# smartcd setup exit-hook
+smartcd setup completion
+# VARSTASH_AUTOCONFIGURE=1
+# VARSTASH_AUTOEDIT=1
+# SMARTCD_NO_INODE=1
+# SMARTCD_AUTOMIGRATE=1
+SMARTCD_LEGACY=1
+SMARTCD_QUIET=1
+# VARSTASH_QUIET=1
 EOF
-    echo "SmartCD configuration file has been written (~/.smartcd_config)"
-fi
+            echo "SmartCD configuration file has been written (~/.smartcd_config)" 2>&1 |& tee -a "$_LOG"
+        fi
 
-cat $HOME/.bashrc | grep .smartcd_config
-BASHRC_CONFIGURED=$?
-if [ "$BASHRC_CONFIGURED" != "0" ]; then
-    echo -e>>$HOME/.bashrc
-    echo "# SmartCD Configuration">>$HOME/.bashrc
-    echo '[ -r "$HOME/.smartcd_config" ] && ( [ -n $BASH_VERSION ] || [ -n $ZSH_VERSION ] ) && source ~/.smartcd_config'>>$HOME/.bashrc
-    echo "SmartCD registered (~/.bashrc)"
-fi
+        cat $HOME/.bashrc | grep .smartcd_config &> /dev/null
+        BASHRC_CONFIGURED=$?
+        if [ "$BASHRC_CONFIGURED" != "0" ]; then
+            echo -e>>"$HOME/.bashrc"
+            echo "# SmartCD Configuration">>"$HOME/.bashrc"
+            echo "[ -r \"$HOME/.smartcd_config\" ] && ( [ -n $BASH_VERSION ] || [ -n $ZSH_VERSION ] ) && source ~/.smartcd_config">>"$HOME/.bashrc"
+            echo "SmartCD registered (~/.bashrc)" 2>&1 |& tee -a "$_LOG"
+        fi
+    else
+        echo "SmartCD is disabled" 2>&1 |& tee -a "$_LOG"
+    fi
 
-source $HOME/.smartcd_config
+    cd "${DOCKER_DEVBOX_HOME}"/cfssl &>> "$_LOG"
+    source .bash_enter &>> "$_LOG"
+    dc down --remove-orphans &>> "$_LOG"
+    echo "Stop CFSSL" 2>&1 |& tee -a "$_LOG"
+    if [[ -z "${DOCKER_DEVBOX_DISABLE_CFSSL}" ]]; then
+       echo "Install CFSSL" 2>&1 |& tee -a "$_LOG"
+       dc pull &>> "$_LOG" || true
+       echo "Start CFSSL" 2>&1 |& tee -a "$_LOG"
+       dc up -d &>> "$_LOG"
+       sleep 10 &>> "$_LOG"
+       install-cfssl-ca &>> "$_LOG"
+    else
+        echo "CFSSL is disabled" 2>&1 |& tee -a "$_LOG"
+    fi
+    source .bash_leave &>> "$_LOG"
+    cd $HOME &>> "$_LOG"
 
-docker network create ${DOCKER_DEVBOX_REVERSE_PROXY_NETWORK-reverse-proxy} || true
+    cd "${DOCKER_DEVBOX_HOME}"/portainer &>> "$_LOG"
+    source .bash_enter &>> "$_LOG"
+    echo "Stop portainer" 2>&1 |& tee -a "$_LOG"
+    dc down --remove-orphans &>> "$_LOG"
+    if [[ -z "${DOCKER_DEVBOX_DISABLE_PORTAINER}" ]]; then
+         echo "Install portainer" 2>&1 |& tee -a "$_LOG"
+         dc pull &>> "$_LOG" || true
+         echo "Start portainer" 2>&1 |& tee -a "$_LOG"
+         dc up -d &>> "$_LOG"
+    else
+        echo "Portainer is disabled" 2>&1 |& tee -a "$_LOG"
+    fi
+    source .bash_leave &>> "$_LOG"
+    cd $HOME &>> "$_LOG"
 
-cd "${DOCKER_DEVBOX_HOME}"/cfssl && dc down --remove-orphans && dc up -d && sleep 10 && install-cfssl-ca && cd $HOME
-cd "${DOCKER_DEVBOX_HOME}"/portainer && dc down --remove-orphans && dc up -d && cd $HOME
+    if [[ -z "${DOCKER_DEVBOX_DISABLE_REVERSE_PROXY}" ]]; then
+        if [[ -z "${DOCKER_DEVBOX_USE_NGINX_PROXY}" ]]
+        then
+            echo "Use traefik as reverse proxy"
+            cd "${DOCKER_DEVBOX_HOME}"/nginx-proxy &>> "$_LOG"
+            source .bash_enter &>> "$_LOG"
+            echo "Stop nginx-proxy" 2>&1 |& tee -a "$_LOG"
+            dc down --remove-orphans &>> "$_LOG"
+            source .bash_leave &>> "$_LOG"
+            cd "${DOCKER_DEVBOX_HOME}"/traefik &>> "$_LOG"
+            source .bash_enter &>> "$_LOG"
+            echo "Stop traefik" 2>&1 |& tee -a "$_LOG"
+            dc down --remove-orphans &>> "$_LOG"
+            echo "Install traefik" 2>&1 |& tee -a "$_LOG"
+            dc pull &>> "$_LOG" || true
+            echo "Start traefik" 2>&1 |& tee -a "$_LOG"
+            dc up -d &>> "$_LOG"
+            source .bash_leave &>> "$_LOG"
+            cd $HOME &>> "$_LOG"
+        else
+            echo "Use nginx-proxy as reverse proxy"
+            cd "${DOCKER_DEVBOX_HOME}"/traefik &>> "$_LOG"
+            source .bash_enter &>> "$_LOG"
+            echo "Stop traefik" 2>&1 |& tee -a "$_LOG"
+            dc down --remove-orphans &>> "$_LOG"
+            source .bash_leave &>> "$_LOG"
+            echo "Stop nginx-proxy" 2>&1 |& tee -a "$_LOG"
+            cd "${DOCKER_DEVBOX_HOME}"/nginx-proxy &>> "$_LOG"
+            source .bash_enter &>> "$_LOG"
+            dc down --remove-orphans &>> "$_LOG"
+            echo "Install nginx-proxy" 2>&1 |& tee -a "$_LOG"
+            dc pull &>> "$_LOG" || true
+            echo "Start nginx-proxy" 2>&1 |& tee -a "$_LOG"
+            dc up -d &>> "$_LOG"
+            source .bash_leave &>> "$_LOG"
+            cd $HOME &>> "$_LOG"
+        fi
+    else
+        echo "Reverse proxy is disabled" 2>&1 |& tee -a "$_LOG"
+    fi
 
-if [[ -z DOCKER_DEVBOX_USE_NGINX_PROXY ]]
-then
-  echo "Use traefik as reverse proxy"
-  cd "${DOCKER_DEVBOX_HOME}"/nginx-proxy && dc down --remove-orphans
-  cd "${DOCKER_DEVBOX_HOME}"/traefik && dc down --remove-orphans && dc up -d && cd $HOME
+    echo "Docker Devbox installation is terminated." 2>&1 |& tee -a "$_LOG"
 else
-  echo "Use nginx-proxy as reverse proxy"
-  cd "${DOCKER_DEVBOX_HOME}"/traefik && dc down --remove-orphans && cd $HOME
-  cd "${DOCKER_DEVBOX_HOME}"/nginx-proxy && dc down --remove-orphans && dc up -d && cd $HOME
+    echo "Docker Devbox installation is terminated (minimal)." 2>&1 |& tee -a "$_LOG"
 fi
+
+source $HOME/.smartcd_config > /dev/null || true

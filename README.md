@@ -40,6 +40,17 @@ curl -L https://github.com/gfi-centre-ouest/docker-devbox/raw/master/installer |
 
 *Installation script may ask for sudo password to install local developement CA Certificates.*
 
+Environment variables available for installer script:
+
+- `DOCKER_DEVBOX_MINIMAL`: Clone docker-devbox repository and create reverse-proxy network only.
+- `DOCKER_DEVBOX_DISABLE_SMARTCD`: Disable SmartCD.
+- `DOCKER_DEVBOX_DISABLE_CFSSL`: Disable CFSSL.
+- `DOCKER_DEVBOX_DISABLE_PORTAINER`: Disable portainer.
+- `DOCKER_DEVBOX_DISABLE_REVERSE_PROXY`: Disable reverse-proxy feature (both nginx-proxy and traefik).
+- `DOCKER_DEVBOX_USE_NGINX_PROXY`: Use nginx-proxy instead of traefik for reverse proxy.
+- `DOCKER_DEVBOX_DISABLE_CLONE`: Disable clone of docker-devbox. This may be useful when running installer right from
+local repository.
+
 # .test as a docker host domain
 
 You have to setup your system for `.test` domains to be resolved as docker host IP.
