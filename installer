@@ -2,21 +2,47 @@
 
 DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-$HOME/.docker-devbox}"
 _LOG="${DOCKER_DEVBOX_HOME}/docker-devbox-installer.log"
-echo "Install Docker Devbox (log file: $_LOG)" 2>&1 |& tee "$_LOG"
 
 export DOCKER_DEVBOX_REVERSE_PROXY_NETWORK="${DOCKER_DEVBOX_REVERSE_PROXY_NETWORK:-reverse-proxy}"
 
-if [[ -z "${DOCKER_DEVBOX_DISABLE_CLONE}" ]]; then
-    if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
-      echo "Update Docker Devbox" 2>&1 |& tee -a "$_LOG"
-      git -C "${DOCKER_DEVBOX_HOME}" fetch --recurse-submodules &>> "$_LOG"
-      git -C "${DOCKER_DEVBOX_HOME}" reset --hard --recurse-submodules &>> "$_LOG"
+if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
+    if [[ -z "${DOCKER_DEVBOX_DISABLE_UPDATE}" ]]; then
+        echo "Update Docker Devbox" 2>&1 |& tee -a "$_LOG"
+        git -C "${DOCKER_DEVBOX_HOME}" fetch --recurse-submodules &>> "$_LOG"
+        git -C "${DOCKER_DEVBOX_HOME}" reset --hard --recurse-submodules &>> "$_LOG"
     else
-      echo "Install Docker Devbox" 2>&1 |& tee -a "$_LOG"
-      git clone --recurse-submodules https://github.com/gfi-centre-ouest/docker-devbox "${DOCKER_DEVBOX_HOME}"
+        echo "Docker Devbox update is disabled" 2>&1 |& tee -a "$_LOG"
     fi
 else
-    echo "Docker Devbox clone is disabled" 2>&1 |& tee -a "$_LOG"
+    echo "Install Docker Devbox"
+    git clone --recurse-submodules https://github.com/gfi-centre-ouest/docker-devbox "${DOCKER_DEVBOX_HOME}"
+    echo "Install Docker Devbox" 2>&1 > "$_LOG"
+fi
+
+DOCKER_DEVBOX_BIN="${DOCKER_DEVBOX_BIN:-/usr/local/bin}"
+
+if [[ -z "${DOCKER_DEVBOX_DISABLE_TOOLS}" ]]; then
+    if [[ ! -z "$(command -v apt-get)" ]]; then
+       sudo apt-get install -y make jq git &>> "$_LOG"
+    elif [[ ! -z "$(command -v yum)" ]]; then
+       sudo yum install -y make jq git &>> "$_LOG"
+    else
+        echo "Unsupported package manager. Make sure make, jq and git packages are installed." 2>&1 |& tee "$_LOG"
+    fi
+
+    _CFSSL_CLI_VERSION=$(curl -s https://api.github.com/repos/Toilal/python-cfssl-cli/releases/latest | grep 'tag_name' | cut -d\" -f4)
+    echo "Install cfssl-cli ($_CFSSL_CLI_VERSION)" 2>&1 |& tee "$_LOG"
+
+    curl -sL -o ./cfssl-cli https://github.com/Toilal/python-cfssl-cli/releases/download/$_CFSSL_CLI_VERSION/cfssl-cli &>> "$_LOG"
+    mv ./cfssl-cli -f "$DOCKER_DEVBOX_BIN" &>> "$_LOG" || sudo mv -f ./cfssl-cli "$DOCKER_DEVBOX_BIN" &>> "$_LOG"
+    chmod +x "$DOCKER_DEVBOX_BIN"/cfssl-cli &>> "$_LOG" || sudo chmod +x "$DOCKER_DEVBOX_BIN"/cfssl-cli &>> "$_LOG"
+
+    _MKCERT_VERSION=$(curl -s https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep 'tag_name' | cut -d\" -f4)
+    echo "Install mkcert ($_MKCERT_VERSION)" 2>&1 |& tee "$_LOG"
+
+    curl -fsSL -o ./mkcert "https://github.com/FiloSottile/mkcert/releases/download/$_MKCERT_VERSION/mkcert-$_MKCERT_VERSION-linux-amd64" &>> "$_LOG"
+    mv -f ./mkcert "$DOCKER_DEVBOX_BIN" &>> "$_LOG" || sudo mv -f ./mkcert "$DOCKER_DEVBOX_BIN" &>> "$_LOG"
+    chmod +x "$DOCKER_DEVBOX_BIN"/mkcert &>> "$_LOG" || sudo chmod +x "$DOCKER_DEVBOX_BIN"/mkcert &>> "$_LOG"
 fi
 
 echo "Create $DOCKER_DEVBOX_REVERSE_PROXY_NETWORK docker network" 2>&1 |& tee -a "$_LOG"

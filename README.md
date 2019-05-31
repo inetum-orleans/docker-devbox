@@ -26,11 +26,6 @@ VirtualBox VM based on Ubuntu Server.
 * Docker >= 18.09.6
 * docker-compose >= 1.24.0
 * GNU Bash
-* make
-* git
-* jq (Optional)
-* cfssl-cli (Optional)
-* mkcert (Optional)
 
 # Install or Update
 
@@ -38,17 +33,26 @@ VirtualBox VM based on Ubuntu Server.
 curl -L https://github.com/gfi-centre-ouest/docker-devbox/raw/master/installer | bash
 ```
 
-*Installation script may ask for sudo password to install local developement CA Certificates.*
+This will install everything required for Docker Devbox, including the following tools:
+
+* make
+* [jq](https://stedolan.github.io/jq/)
+* [cfssl-cli](https://github.com/Toilal/python-cfssl-cli)
+* [mkcert](https://github.com/FiloSottile/mkcert)
+
+*Installation script may ask for sudo password to install those dependencies.*
 
 Environment variables available for installer script:
 
 - `DOCKER_DEVBOX_MINIMAL`: Clone docker-devbox repository and create reverse-proxy network only.
+- `DOCKER_DEVBOX_BIN`: Directory available in PATH where tools (cfssl-cli, mkcert) will be installed. Default is `/usr/local/bin`.
+- `DOCKER_DEVBOX_DISABLE_TOOLS`: Disable tools.
 - `DOCKER_DEVBOX_DISABLE_SMARTCD`: Disable SmartCD.
 - `DOCKER_DEVBOX_DISABLE_CFSSL`: Disable CFSSL.
 - `DOCKER_DEVBOX_DISABLE_PORTAINER`: Disable portainer.
 - `DOCKER_DEVBOX_DISABLE_REVERSE_PROXY`: Disable reverse-proxy feature (both nginx-proxy and traefik).
 - `DOCKER_DEVBOX_USE_NGINX_PROXY`: Use nginx-proxy instead of traefik for reverse proxy.
-- `DOCKER_DEVBOX_DISABLE_CLONE`: Disable clone of docker-devbox. This may be useful when running installer right from
+- `DOCKER_DEVBOX_DISABLE_UPDATE`: Disable update of docker-devbox. This may be useful when running installer right from
 local repository.
 
 # .test as a docker host domain
@@ -76,40 +80,6 @@ echo "DOCKER_HOST_IP=$DOCKER_HOST_IP"
 sudo sh -c "echo address=/.test/$DOCKER_HOST_IP>/etc/NetworkManager/dnsmasq.d/test-domain-to-docker-host-ip"
 
 sudo service NetworkManager restart
-```
-
-# Optional
-
-Optional dependencies will be downloaded on demand if not already available on the system, but you should install
-them manually.
-
-
-- jq
-```
-sudo apt-get install -y jq
-```
-
-- cfssl-cli
-
-```
-CFSSL_CLI_VERSION=$(curl -s https://api.github.com/repos/Toilal/python-cfssl-cli/releases/latest | grep 'tag_name' | cut -d\" -f4)
-echo "## Installation de cfssl-cli $CFSSL_CLI_VERSION"
-
-curl -sL -o ./cfssl-cli https://github.com/Toilal/python-cfssl-cli/releases/download/$CFSSL_CLI_VERSION/cfssl-cli
-sudo mv ./cfssl-cli /usr/local/bin/cfssl-cli
-
-sudo chmod +x /usr/local/bin/cfssl-cli
-```
-
-- mkcert
-
-```
-MKCERT_VERSION=$(curl -s https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep 'tag_name' | cut -d\" -f4)
-
-curl -fsSL -o ./mkcert" "https://github.com/FiloSottile/mkcert/releases/download/$MKCERT_VERSION/mkcert-$MKCERT_VERSION-linux-amd64"
-sudo mv ./mkcert /usr/local/bin/mkcert
-
-sudo chmod +x /usr/local/bin/mkcert
 ```
 
 # Quick migration from previous version
