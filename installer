@@ -72,8 +72,8 @@ EOF
 
     cd "${DOCKER_DEVBOX_HOME}"/cfssl &>> "$_LOG"
     source .bash_enter &>> "$_LOG"
-    dc down --remove-orphans &>> "$_LOG"
     echo "Stop CFSSL" 2>&1 |& tee -a "$_LOG"
+    dc down --remove-orphans &>> "$_LOG"
     if [[ -z "${DOCKER_DEVBOX_DISABLE_CFSSL}" ]]; then
        echo "Install CFSSL" 2>&1 |& tee -a "$_LOG"
        dc pull &>> "$_LOG" || true
