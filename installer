@@ -9,7 +9,8 @@ if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
     if [[ -z "${DOCKER_DEVBOX_DISABLE_UPDATE}" ]]; then
         echo "Update Docker Devbox" 2>&1 |& tee -a "$_LOG"
         git -C "${DOCKER_DEVBOX_HOME}" fetch --recurse-submodules &>> "$_LOG"
-        git -C "${DOCKER_DEVBOX_HOME}" reset --hard --recurse-submodules &>> "$_LOG"
+        git -C "${DOCKER_DEVBOX_HOME}" reset --hard origin/master  &>> "$_LOG"
+        git -C "${DOCKER_DEVBOX_HOME}" submodule foreach --recursive git reset --hard origin/master &>> "$_LOG"
     else
         echo "Docker Devbox update is disabled" 2>&1 |& tee -a "$_LOG"
     fi
