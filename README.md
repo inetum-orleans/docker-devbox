@@ -46,7 +46,7 @@ Environment variables available for installer script:
 
 - `DOCKER_DEVBOX_MINIMAL`: Clone docker-devbox repository and create reverse-proxy network only.
 - `DOCKER_DEVBOX_BIN`: Directory available in PATH where tools (cfssl-cli, mkcert) will be installed. Default is `/usr/local/bin`.
-- `DOCKER_DEVBOX_DISABLE_TOOLS`: Disable tools.
+- `DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES`: Disable optional dependencies installation.
 - `DOCKER_DEVBOX_DISABLE_SMARTCD`: Disable SmartCD.
 - `DOCKER_DEVBOX_DISABLE_CFSSL`: Disable CFSSL.
 - `DOCKER_DEVBOX_DISABLE_PORTAINER`: Disable portainer.
@@ -54,6 +54,8 @@ Environment variables available for installer script:
 - `DOCKER_DEVBOX_USE_NGINX_PROXY`: Use nginx-proxy instead of traefik for reverse proxy.
 - `DOCKER_DEVBOX_DISABLE_UPDATE`: Disable update of docker-devbox. This may be useful when running installer right from
 local repository.
+- `DOCKER_DEVBOX_CI`: Equivalent to `DOCKER_DEVBOX_MINIMAL` and `DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES`, recommanded for CI.
+
 
 # .test as a docker host domain
 

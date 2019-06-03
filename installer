@@ -3,6 +3,12 @@
 DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-$HOME/.docker-devbox}"
 _LOG="${DOCKER_DEVBOX_HOME}/docker-devbox-installer.log"
 
+if [[ ! -z "${DOCKER_DEVBOX_CI}" ]]; then
+  DOCKER_DEVBOX_MINIMAL=1
+  DOCKER_DEVBOX_DISABLE_UPDATE=1
+  DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES=1
+fi
+
 export DOCKER_DEVBOX_REVERSE_PROXY_NETWORK="${DOCKER_DEVBOX_REVERSE_PROXY_NETWORK:-reverse-proxy}"
 
 if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
@@ -22,15 +28,25 @@ fi
 
 DOCKER_DEVBOX_BIN="${DOCKER_DEVBOX_BIN:-/usr/local/bin}"
 
-if [[ -z "${DOCKER_DEVBOX_DISABLE_TOOLS}" ]]; then
-    if [[ ! -z "$(command -v apt-get)" ]]; then
-       sudo apt-get install -y make jq git &>> "$_LOG"
-    elif [[ ! -z "$(command -v yum)" ]]; then
-       sudo yum install -y make jq git &>> "$_LOG"
-    else
-        echo "Unsupported package manager. Make sure make, jq and git packages are installed." 2>&1 |& tee "$_LOG"
+if [[ ! -z "$(command -v apt-get)" ]]; then
+    if [[ -z "$(command -v make)" ]]; then
+      sudo apt-get install -y make &>> "$_LOG"
     fi
+    if [[ -z "$(command -v jq)" ]]; then
+      sudo apt-get install -y jq &>> "$_LOG"
+    fi
+elif [[ ! -z "$(command -v yum)" ]]; then
+    if [[ -z "$(command -v make)" ]]; then
+      sudo yum install -y make &>> "$_LOG"
+    fi
+    if [[ -z "$(command -v jq)" ]]; then
+      sudo yum install -y jq &>> "$_LOG"
+    fi
+else
+    echo "Unsupported package manager. Make sure make and jq packages are installed." 2>&1 |& tee "$_LOG"
+fi
 
+if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
     _CFSSL_CLI_VERSION=$(curl -s https://api.github.com/repos/Toilal/python-cfssl-cli/releases/latest | grep 'tag_name' | cut -d\" -f4)
     echo "Install cfssl-cli ($_CFSSL_CLI_VERSION)" 2>&1 |& tee "$_LOG"
 
