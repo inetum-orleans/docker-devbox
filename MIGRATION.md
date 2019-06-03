@@ -51,26 +51,9 @@ Migrate a project using docker-devbox-generator > 1.4
 This is guideline to migrate a project created from a manual template or with 
 [generator-docker-devbox](https://github.com/gfi-centre-ouest/generator-docker-devbox) < 1.4
 
-- Run [generator-docker-devbox](https://github.com/gfi-centre-ouest/generator-docker-devbox) inside the project 
-directory. You should choose features that match your existing environment.
+**You must at least perform the following operations.**
 
-```bash
-yo @gfi-centre-ouest/docker-devbox
-``` 
-
-- Override all conflicts, but keep `docker-compose.yml` and `docker-compose.override.dev.yml`.
-
-- Restore your `.gitignore` but keep the generated one content at the top of the file.
-
-- Remove `.bash_enter.env` or `.bash_enter_env` and cleanup `.bash_enter.config`.
-
-- Remove `.bash.lib.d`, `.bash_enter.d` and `.bash_leave.d` directories. Those directories are now read right from 
-included locally installed docker-devbox (`~/.docker-devbox/scripts`). You can style bring those directories back if 
-you need to override or add a script.
-
-- Rename original `Dockerfile` files from `.docker` subdirectories to `Dockerfile.mo`
-
-- Look for each declaration of `nginx-proxy` network and replace with a more generic and configurable external network.
+- Look for each declaration of `nginx-proxy` network and replace with the more generic and configurable external network.
 
 Before:
 ```yaml
@@ -128,6 +111,29 @@ services:
       - 'VIRTUAL_HOST=${DOCKER_DEVBOX_DOMAIN_PREFIX}.${DOCKER_DEVBOX_DOMAIN}'
       - 'VIRTUAL_PORT=80'
 ```
+
+At this point, the project should work like before with either traefik or nginx-proxy as the reverse-proxy.
+
+**Operations that follows are now optional, but you should consider them to benefits of all features provided by docker-devbox.**
+
+- Run [generator-docker-devbox](https://github.com/gfi-centre-ouest/generator-docker-devbox) inside the project 
+directory. You should choose features that match your existing environment.
+
+```bash
+yo @gfi-centre-ouest/docker-devbox
+``` 
+
+- Override all conflicts, but keep `docker-compose.yml` and `docker-compose.override.dev.yml`.
+
+- Restore your `.gitignore` but keep the generated one content at the top of the file.
+
+- Remove `.bash_enter.env` or `.bash_enter_env` and cleanup `.bash_enter.config`.
+
+- Remove `.bash.lib.d`, `.bash_enter.d` and `.bash_leave.d` directories. Those directories are now read right from 
+included locally installed docker-devbox (`~/.docker-devbox/scripts`). You can style bring those directories back if 
+you need to override or add a script.
+
+- Rename original `Dockerfile` files from `.docker` subdirectories to `Dockerfile.mo`
 
 - Run `cd .` to reload the environment or run `source .bash_enter`.
 
