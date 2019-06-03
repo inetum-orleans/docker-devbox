@@ -88,9 +88,11 @@ EOF
         cat $HOME/.bashrc | grep .smartcd_config &> /dev/null
         BASHRC_CONFIGURED=$?
         if [ "$BASHRC_CONFIGURED" != "0" ]; then
-            echo -e>>"$HOME/.bashrc"
-            echo "# SmartCD Configuration">>"$HOME/.bashrc"
-            echo "[ -r \"$HOME/.smartcd_config\" ] && ( [ -n $BASH_VERSION ] || [ -n $ZSH_VERSION ] ) && source ~/.smartcd_config">>"$HOME/.bashrc"
+            cat << 'EOF' >> "$HOME/.bashrc"
+
+# SmartCD Configuration
+[ -r "$HOME/.smartcd_config" ] && ( [ -n $BASH_VERSION ] || [ -n $ZSH_VERSION ] ) && source $HOME/.smartcd_config
+EOF
             echo "SmartCD registered (~/.bashrc)" 2>&1 |& tee -a "$_LOG"
         fi
     else
