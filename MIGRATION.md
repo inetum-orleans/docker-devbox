@@ -53,6 +53,12 @@ This is guideline to migrate a project created from a manual template or with
 
 **You must at least perform the following operations.**
 
+- Update version in `docker-compose.yml` and `.override` files, it should be at least `2.2` or `3.7`.
+
+```yaml
+version: '2.2'
+```
+
 - Look for each declaration of `nginx-proxy` network and replace with the more generic and configurable external network.
 
 Before:
