@@ -59,7 +59,7 @@ elif [[ ! -z "$(command -v apk)" ]]; then
       sudo apk install -y bash &>> "$_LOG"
     fi
 else
-    echo "Unsupported package manager. Make sure make and jq packages are installed." 2>&1 |& tee "$_LOG"
+    echo "Unsupported package manager. Make sure make, jq and bash packages are installed." 2>&1 |& tee "$_LOG"
 fi
 
 if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
