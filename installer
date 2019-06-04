@@ -35,12 +35,28 @@ if [[ ! -z "$(command -v apt-get)" ]]; then
     if [[ -z "$(command -v jq)" ]]; then
       sudo apt-get install -y jq &>> "$_LOG"
     fi
+    if [[ -z "$(command -v bash)" ]]; then
+      sudo apt-get install -y bash &>> "$_LOG"
+    fi
 elif [[ ! -z "$(command -v yum)" ]]; then
     if [[ -z "$(command -v make)" ]]; then
       sudo yum install -y make &>> "$_LOG"
     fi
     if [[ -z "$(command -v jq)" ]]; then
       sudo yum install -y jq &>> "$_LOG"
+    fi
+    if [[ -z "$(command -v bash)" ]]; then
+      sudo yum install -y bash &>> "$_LOG"
+    fi
+elif [[ ! -z "$(command -v apk)" ]]; then
+    if [[ -z "$(command -v make)" ]]; then
+      sudo apk install -y make &>> "$_LOG"
+    fi
+    if [[ -z "$(command -v jq)" ]]; then
+      sudo apk install -y jq &>> "$_LOG"
+    fi
+    if [[ -z "$(command -v bash)" ]]; then
+      sudo apk install -y bash &>> "$_LOG"
     fi
 else
     echo "Unsupported package manager. Make sure make and jq packages are installed." 2>&1 |& tee "$_LOG"
@@ -111,6 +127,8 @@ EOF
 EOF
             echo "SmartCD registered (~/.bashrc)" 2>&1 |& tee -a "$_LOG"
         fi
+
+        source $HOME/.smartcd_config > /dev/null || true
     else
         echo "SmartCD is disabled" 2>&1 |& tee -a "$_LOG"
     fi
@@ -192,5 +210,3 @@ EOF
 else
     echo "Docker Devbox installation is terminated (minimal)." 2>&1 |& tee -a "$_LOG"
 fi
-
-source $HOME/.smartcd_config > /dev/null || true
