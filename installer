@@ -127,8 +127,6 @@ EOF
 EOF
             echo "SmartCD registered (~/.bashrc)" 2>&1 |& tee -a "$_LOG"
         fi
-
-        source $HOME/.smartcd_config > /dev/null || true
     else
         echo "SmartCD is disabled" 2>&1 |& tee -a "$_LOG"
     fi
@@ -209,4 +207,8 @@ EOF
     echo "Docker Devbox installation is terminated." 2>&1 |& tee -a "$_LOG"
 else
     echo "Docker Devbox installation is terminated (minimal)." 2>&1 |& tee -a "$_LOG"
+fi
+
+if [[ -f $HOME/.smartcd_config ]]; then
+  source $HOME/.smartcd_config
 fi
