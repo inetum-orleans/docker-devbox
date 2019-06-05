@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+if [[ $EUID -eq 0 ]]
+then
+    echo "Please run as non-root user."
+    exit 1
+fi
+
 DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-$HOME/.docker-devbox}"
 _LOG="${DOCKER_DEVBOX_HOME}/docker-devbox-installer.log"
 
