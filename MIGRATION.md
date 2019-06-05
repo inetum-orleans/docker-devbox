@@ -34,7 +34,7 @@ docker rm -f nginx-proxy nginx-proxy-fallback portainer
 - Install [docker-devbox](https://github.com/gfi-centre-ouest/docker-devbox) with `DOCKER_DEVBOX_USE_NGINX_PROXY` environment variable
 
 ```bash
-DOCKER_DEVBOX_USE_NGINX_PROXY=1 curl -L https://github.com/gfi-centre-ouest/docker-devbox/raw/master/installer | bash
+curl -L https://github.com/gfi-centre-ouest/docker-devbox/raw/master/installer | DOCKER_DEVBOX_USE_NGINX_PROXY=1 bash
 ```
 
 - Create symlinks for older project to copy certificates at the right place

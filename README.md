@@ -56,6 +56,14 @@ Environment variables available for installer script:
 local repository.
 - `DOCKER_DEVBOX_CI`: Equivalent to `DOCKER_DEVBOX_MINIMAL` and `DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES`, recommanded for CI.
 
+Environment variables can be set right before bash invocation in the installer one-liner.
+
+```bash
+curl -L https://github.com/gfi-centre-ouest/docker-devbox/raw/master/installer | \
+DOCKER_DEVBOX_CI=1 \
+bash
+```
+
 
 # .test as a docker host domain
 
