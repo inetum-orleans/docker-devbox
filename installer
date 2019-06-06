@@ -36,10 +36,6 @@ if [[ ! -x $(command -v docker-compose) ]]; then
   exit 1
 fi
 
-MAKE_EXE="$(command -v make)"
-JQ_EXE="$(command -v jq)"
-BASH_EXE="$(command -v bash)"
-
 if [[ ! -z "$(command -v apt-get)" ]]; then
   PACKAGE_INSTALL_COMMAND="apt-get -y install"
 elif [[ ! -z "$(command -v yum)" ]]; then
@@ -50,33 +46,26 @@ else
   PACKAGE_INSTALL_COMMAND=""
 fi
 
-if [ -z "$(command -v git)" ]; then
-  if [[ ! -x "$SUDO_EXE" && $EUID -ne 0 ]]; then
-    echo "Sudo is not available to install git. Install 'git' package manually and run the installer again."
-    exit 1
-  fi
-  if [[ -z "$PACKAGE_INSTALL_COMMAND" ]]; then
-    echo "No supported package manager found to install git. Install 'git' package manually and run the installer again."
-    exit 1
-  fi
+_install_package_if_missing() {
+  local PACKAGE="$1"
 
-  echo "Install git" 2>&1 | tee -a "$_LOG"
-  $SUDO_EXE $PACKAGE_INSTALL_COMMAND git &>> "$_LOG"
-fi
+  if [[ ! -x $(command -v "$PACKAGE") ]]; then
+    if [[ ! -x "$SUDO_EXE" && $EUID -ne 0 ]]; then
+      echo "Sudo is not available to install $PACKAGE. Install '$PACKAGE' package manually and run the installer again."
+      exit 1
+    fi
+    if [[ -z "$PACKAGE_INSTALL_COMMAND" ]]; then
+      echo "No package manager found to install $PACKAGE. Install '$PACKAGE' package manually and run the installer again."
+      exit 1
+    fi
 
-if [ -z "$(command -v make)" ]; then
-  if [[ ! -x "$SUDO_EXE" && $EUID -ne 0 ]]; then
-    echo "Sudo is not available to install make. Install 'make' package manually and run the installer again."
-    exit 1
+    echo "Install $PACKAGE" 2>&1 | tee -a "$_LOG"
+    $SUDO_EXE $PACKAGE_INSTALL_COMMAND $PACKAGE &>> "$_LOG"
   fi
-  if [[ -z "$PACKAGE_INSTALL_COMMAND" ]]; then
-    echo "No supported package manager found to install make. Install 'make' package manually and run the installer again."
-    exit 1
-  fi
+}
 
-  echo "Install make" 2>&1 |& tee -a "$_LOG"
-  $SUDO_EXE $PACKAGE_INSTALL_COMMAND make &>> "$_LOG"
-fi
+_install_package_if_missing "git"
+_install_package_if_missing "make"
 
 if [[ ! -z "${DOCKER_DEVBOX_CI}" ]]; then
   DOCKER_DEVBOX_MINIMAL=1
@@ -135,51 +124,45 @@ fi
 
 export PATH="$DOCKER_DEVBOX_BIN:$PATH"
 
+if [[ ! -x "$(command -v jq)" ]]; then
+  _install_package_if_missing "curl"
+
+  echo "Install jq" 2>&1 |& tee "$_LOG"
+  curl -sL -o "$DOCKER_DEVBOX_BIN"/jq "https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64" &>> "$_LOG"
+  chmod +x "$DOCKER_DEVBOX_BIN"/jq &>> "$_LOG"
+fi
+
 if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
-    if [ -z "$(command -v curl)" ]; then
-      if [[ ! -x "$SUDO_EXE" && $EUID -ne 0 ]]; then
-        echo "Sudo is not available to install curl. Install 'curl' package manually and run the installer again."
-        exit 1
-      fi
-      if [[ -z "$PACKAGE_INSTALL_COMMAND" ]]; then
-        echo "No package manager found to install curl. Install 'curl' package manually and run the installer again."
-        exit 1
-      fi
-
-      echo "Install curl" 2>&1 | tee -a "$_LOG"
-      $SUDO_EXE $PACKAGE_INSTALL_COMMAND curl &>> "$_LOG"
-    fi
-
     _CFSSL_CLI_VERSION=$(curl -s https://api.github.com/repos/Toilal/python-cfssl-cli/releases/latest | grep 'tag_name' | cut -d\" -f4)
     _CFSSL_CLI_INSTALL=1
-    if [ ! -z "$(command -v cfssl-cli)" ]; then
+    if [[ -x "$(command -v cfssl-cli)" ]]; then
       cfssl-cli --version | grep "cfssl-cli, version $_CFSSL_CLI_VERSION" &>> "$_LOG"
       _CFSSL_CLI_INSTALL=$?
     fi
 
-    if [ "$_CFSSL_CLI_INSTALL" -ne 0 ]; then
-      echo "Install cfssl-cli ($_CFSSL_CLI_VERSION)" 2>&1 |& tee "$_LOG"
+    if [[ "$_CFSSL_CLI_INSTALL" -ne 0 ]]; then
+      _install_package_if_missing "curl"
 
-      curl -sL -o ./cfssl-cli https://github.com/Toilal/python-cfssl-cli/releases/download/$_CFSSL_CLI_VERSION/cfssl-cli &>> "$_LOG"
-      mv -f ./cfssl-cli "$DOCKER_DEVBOX_BIN" &>> "$_LOG"
+      echo "Install cfssl-cli ($_CFSSL_CLI_VERSION)" 2>&1 |& tee "$_LOG"
+      curl -sL -o "$DOCKER_DEVBOX_BIN"/cfssl-cli "https://github.com/Toilal/python-cfssl-cli/releases/download/$_CFSSL_CLI_VERSION/cfssl-cli" &>> "$_LOG"
       chmod +x "$DOCKER_DEVBOX_BIN"/cfssl-cli &>> "$_LOG"
     fi
 
     _MKCERT_VERSION=$(curl -s https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep 'tag_name' | cut -d\" -f4)
     _MKCERT_INSTALL=1
-    if [[ -f ""$DOCKER_DEVBOX_BIN"/.mkcert.version" ]]; then
+    if [[ -f "$DOCKER_DEVBOX_BIN"/.mkcert.version ]]; then
         if [[ $(cat "$DOCKER_DEVBOX_BIN"/.mkcert.version) == "${_MKCERT_VERSION}" ]]; then
           _MKCERT_INSTALL=0
         fi
     fi
 
-    if [ "$_MKCERT_INSTALL" -ne 0 ]; then
-      echo "Install mkcert ($_MKCERT_VERSION)" 2>&1 |& tee "$_LOG"
+    if [[ "$_MKCERT_INSTALL" -ne 0 ]]; then
+      _install_package_if_missing "curl"
 
-      curl -fsSL -o ./mkcert "https://github.com/FiloSottile/mkcert/releases/download/$_MKCERT_VERSION/mkcert-$_MKCERT_VERSION-linux-amd64" &>> "$_LOG"
-      mv -f ./mkcert "$DOCKER_DEVBOX_BIN" &>> "$_LOG"
+      echo "Install mkcert ($_MKCERT_VERSION)" 2>&1 |& tee "$_LOG"
+      curl -fsSL -o "$DOCKER_DEVBOX_BIN"/mkcert "https://github.com/FiloSottile/mkcert/releases/download/$_MKCERT_VERSION/mkcert-$_MKCERT_VERSION-linux-amd64" &>> "$_LOG"
       chmod +x "$DOCKER_DEVBOX_BIN"/mkcert &>> "$_LOG"
-      
+
       echo "$_MKCERT_VERSION" > "$DOCKER_DEVBOX_BIN"/.mkcert.version
     fi
 fi
