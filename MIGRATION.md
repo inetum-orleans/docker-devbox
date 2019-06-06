@@ -162,3 +162,5 @@ run --workdir="$(_docker_workdir "/app")" --entrypoint npm {{instance.name}} "$@
 
 - In `.bin` directory, replace `_docker_devbox_map_workdir` with `_docker_workdir` and 
 `$DOCKER_DEVBOX_DIR` with `$DOCKER_DEVBOX_SCRIPTS_PATH`.
+
+- In `.docker/**/Dockerfile.mo` files, replace `DOCKER_DEVBOX_CA_CERTIFICATES` with `DOCKER_DEVBOX_COPY_CA_CERTIFICATES`
