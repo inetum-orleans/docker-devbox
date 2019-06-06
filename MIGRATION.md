@@ -139,6 +139,8 @@ yo @gfi-centre-ouest/docker-devbox
 included locally installed docker-devbox (`~/.docker-devbox/scripts`). You can style bring those directories back if 
 you need to override or add a script.
 
+- Remove `dc` `mo` `run` `system` `jq` files from `.bin` directory.
+
 - Rename original `Dockerfile` files from `.docker` subdirectories to `Dockerfile.mo`
 
 - Run `cd .` to reload the environment or run `source .bash_enter`.
