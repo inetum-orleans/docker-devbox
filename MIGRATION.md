@@ -118,6 +118,15 @@ services:
       - 'VIRTUAL_PORT=80'
 ```
 
+- Check for aliases defined in `.bash_enter`, or commands in `.bin` directory for `dc run` commands using a service 
+normally handled by traefik (like `apache` or `nginx` service). Add the following label to the run command, or simply 
+use docker-devbox [run](https://github.com/gfi-centre-ouest/docker-devbox-scripts/blob/master/.bin/run) command instead.
+(To avoid Bad Gateway issues on the main web container when those additional containers are running.)
+
+```
+--label traefik.enable=false
+```
+
 At this point, the project should work like before with either traefik or nginx-proxy as the reverse-proxy.
 
 **Operations that follows are now optional, but you should consider them to benefits of all features provided by docker-devbox.**
