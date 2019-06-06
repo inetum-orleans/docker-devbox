@@ -1,3 +1,4 @@
 /docker-devbox-installer.log
 /bin/cfssl-cli
 /bin/mkcert
+/bin/.mkcert.version

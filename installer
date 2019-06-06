@@ -150,8 +150,14 @@ if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
       $SUDO_EXE $PACKAGE_INSTALL_COMMAND curl &>> "$_LOG"
     fi
 
-    if [ -z "$(command -v cfssl-cli)" ]; then
-      _CFSSL_CLI_VERSION=$(curl -s https://api.github.com/repos/Toilal/python-cfssl-cli/releases/latest | grep 'tag_name' | cut -d\" -f4)
+    _CFSSL_CLI_VERSION=$(curl -s https://api.github.com/repos/Toilal/python-cfssl-cli/releases/latest | grep 'tag_name' | cut -d\" -f4)
+    _CFSSL_CLI_INSTALL=1
+    if [ ! -z "$(command -v cfssl-cli)" ]; then
+      cfssl-cli --version | grep "cfssl-cli, version $_CFSSL_CLI_VERSION" &>> "$_LOG"
+      _CFSSL_CLI_INSTALL=$?
+    fi
+
+    if [ "$_CFSSL_CLI_INSTALL" -ne 0 ]; then
       echo "Install cfssl-cli ($_CFSSL_CLI_VERSION)" 2>&1 |& tee "$_LOG"
 
       curl -sL -o ./cfssl-cli https://github.com/Toilal/python-cfssl-cli/releases/download/$_CFSSL_CLI_VERSION/cfssl-cli &>> "$_LOG"
@@ -159,13 +165,22 @@ if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
       chmod +x "$DOCKER_DEVBOX_BIN"/cfssl-cli &>> "$_LOG"
     fi
 
-    if [ -z "$(command -v mkcert)" ]; then
-      _MKCERT_VERSION=$(curl -s https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep 'tag_name' | cut -d\" -f4)
+    _MKCERT_VERSION=$(curl -s https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep 'tag_name' | cut -d\" -f4)
+    _MKCERT_INSTALL=1
+    if [[ -f ""$DOCKER_DEVBOX_BIN"/.mkcert.version" ]]; then
+        if [[ $(cat "$DOCKER_DEVBOX_BIN"/.mkcert.version) == "${_MKCERT_VERSION}" ]]; then
+          _MKCERT_INSTALL=0
+        fi
+    fi
+
+    if [ "$_MKCERT_INSTALL" -ne 0 ]; then
       echo "Install mkcert ($_MKCERT_VERSION)" 2>&1 |& tee "$_LOG"
 
       curl -fsSL -o ./mkcert "https://github.com/FiloSottile/mkcert/releases/download/$_MKCERT_VERSION/mkcert-$_MKCERT_VERSION-linux-amd64" &>> "$_LOG"
       mv -f ./mkcert "$DOCKER_DEVBOX_BIN" &>> "$_LOG"
       chmod +x "$DOCKER_DEVBOX_BIN"/mkcert &>> "$_LOG"
+      
+      echo "$_MKCERT_VERSION" > "$DOCKER_DEVBOX_BIN"/.mkcert.version
     fi
 fi
 
