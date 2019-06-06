@@ -1,13 +1,82 @@
 #!/usr/bin/env bash
 
-if [[ $EUID -eq 0 ]]
-then
-    echo "Please run as non-root user."
-    exit 1
+DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-$HOME/.docker-devbox}"
+DOCKER_DEVBOX_BIN="${DOCKER_DEVBOX_HOME}/bin"
+
+if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
+  _LOG="${DOCKER_DEVBOX_HOME}/docker-devbox-installer.log"
+else
+  _LOG="${PWD}/docker-devbox-installer.log"
 fi
 
-DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-$HOME/.docker-devbox}"
-_LOG="${DOCKER_DEVBOX_HOME}/docker-devbox-installer.log"
+echo "">"$_LOG"
+
+if [[ $EUID -eq 0 ]] && [[ -z "${DOCKER_DEVBOX_ALLOW_ROOT}" ]]
+then
+  echo "Please run as non-root user or set DOCKER_DEVBOX_ALLOW_ROOT environment variable." 2>&1 | tee -a "$_LOG"
+  exit 1
+fi
+
+if [[ $EUID -eq 0 ]]; then
+  SUDO_EXE=""
+else
+  SUDO_EXE=$(command -v sudo)
+  if [[ ! -x "$SUDO_EXE" ]]; then
+    echo "sudo is not available." 2>&1 | tee -a "$_LOG"
+  fi
+fi
+
+if [[ ! -x $(command -v docker) ]]; then
+  echo "Please install docker and docker-compose before installing docker devbox."
+  exit 1
+fi
+
+if [[ ! -x $(command -v docker-compose) ]]; then
+  echo "Please install docker-compose before installing docker devbox."
+  exit 1
+fi
+
+MAKE_EXE="$(command -v make)"
+JQ_EXE="$(command -v jq)"
+BASH_EXE="$(command -v bash)"
+
+if [[ ! -z "$(command -v apt-get)" ]]; then
+  PACKAGE_INSTALL_COMMAND="apt-get -y install"
+elif [[ ! -z "$(command -v yum)" ]]; then
+  PACKAGE_INSTALL_COMMAND="yum -y install"
+elif [ ! -z "$(command -v apk)" ]; then
+  PACKAGE_INSTALL_COMMAND="apk add"
+else
+  PACKAGE_INSTALL_COMMAND=""
+fi
+
+if [ -z "$(command -v git)" ]; then
+  if [[ ! -x "$SUDO_EXE" && $EUID -ne 0 ]]; then
+    echo "Sudo is not available to install git. Install 'git' package manually and run the installer again."
+    exit 1
+  fi
+  if [[ -z "$PACKAGE_INSTALL_COMMAND" ]]; then
+    echo "No supported package manager found to install git. Install 'git' package manually and run the installer again."
+    exit 1
+  fi
+
+  echo "Install git" 2>&1 | tee -a "$_LOG"
+  $SUDO_EXE $PACKAGE_INSTALL_COMMAND git &>> "$_LOG"
+fi
+
+if [ -z "$(command -v make)" ]; then
+  if [[ ! -x "$SUDO_EXE" && $EUID -ne 0 ]]; then
+    echo "Sudo is not available to install make. Install 'make' package manually and run the installer again."
+    exit 1
+  fi
+  if [[ -z "$PACKAGE_INSTALL_COMMAND" ]]; then
+    echo "No supported package manager found to install make. Install 'make' package manually and run the installer again."
+    exit 1
+  fi
+
+  echo "Install make" 2>&1 |& tee -a "$_LOG"
+  $SUDO_EXE $PACKAGE_INSTALL_COMMAND make &>> "$_LOG"
+fi
 
 if [[ ! -z "${DOCKER_DEVBOX_CI}" ]]; then
   DOCKER_DEVBOX_MINIMAL=1
@@ -27,61 +96,77 @@ if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
         echo "Docker Devbox update is disabled" 2>&1 |& tee -a "$_LOG"
     fi
 else
-    echo "Install Docker Devbox"
-    git clone --recurse-submodules https://github.com/gfi-centre-ouest/docker-devbox "${DOCKER_DEVBOX_HOME}"
     echo "Install Docker Devbox" 2>&1 > "$_LOG"
+    if [[ -z ${DOCKER_DEVBOX_MINIMAL} ]]; then
+      git clone --recurse-submodules https://github.com/gfi-centre-ouest/docker-devbox "${DOCKER_DEVBOX_HOME}"
+    else
+      git clone https://github.com/gfi-centre-ouest/docker-devbox "${DOCKER_DEVBOX_HOME}"
+      git -C "${DOCKER_DEVBOX_HOME}" submodule update --init scripts
+    fi
 fi
 
-DOCKER_DEVBOX_BIN="${DOCKER_DEVBOX_BIN:-/usr/local/bin}"
+mkdir -p $DOCKER_DEVBOX_BIN
 
-if [[ ! -z "$(command -v apt-get)" ]]; then
-    if [[ -z "$(command -v make)" ]]; then
-      sudo apt-get install -y make &>> "$_LOG"
-    fi
-    if [[ -z "$(command -v jq)" ]]; then
-      sudo apt-get install -y jq &>> "$_LOG"
-    fi
-    if [[ -z "$(command -v bash)" ]]; then
-      sudo apt-get install -y bash &>> "$_LOG"
-    fi
-elif [[ ! -z "$(command -v yum)" ]]; then
-    if [[ -z "$(command -v make)" ]]; then
-      sudo yum install -y make &>> "$_LOG"
-    fi
-    if [[ -z "$(command -v jq)" ]]; then
-      sudo yum install -y jq &>> "$_LOG"
-    fi
-    if [[ -z "$(command -v bash)" ]]; then
-      sudo yum install -y bash &>> "$_LOG"
-    fi
-elif [[ ! -z "$(command -v apk)" ]]; then
-    if [[ -z "$(command -v make)" ]]; then
-      sudo apk install -y make &>> "$_LOG"
-    fi
-    if [[ -z "$(command -v jq)" ]]; then
-      sudo apk install -y jq &>> "$_LOG"
-    fi
-    if [[ -z "$(command -v bash)" ]]; then
-      sudo apk install -y bash &>> "$_LOG"
-    fi
-else
-    echo "Unsupported package manager. Make sure make, jq and bash packages are installed." 2>&1 |& tee "$_LOG"
+if [[ -f "$HOME/.bashrc" ]]; then
+  cat "$HOME/.bashrc" | grep "export PATH=\"$DOCKER_DEVBOX_BIN:\$PATH\"" &> /dev/null
+  BASH_RC_CONFIGURED=$?
+  if [[ "$BASH_RC_CONFIGURED" -ne 0 ]]; then
+    echo "Add $DOCKER_DEVBOX_BIN to path (.bashrc)" 2>&1 |& tee -a "$_LOG"
+
+    cat << EOF >> "$HOME/.bashrc"
+
+# Add docker-devbox bin to PATH
+export PATH="$DOCKER_DEVBOX_BIN:\$PATH"
+EOF
+  fi
+elif [[ -f "$HOME/.bash_profile" ]]; then
+  cat "$HOME/.bash_profile" | grep "export PATH=\"$DOCKER_DEVBOX_BIN:\$PATH\"" &> /dev/null
+  BASH_PROFILE_CONFIGURED=$?
+  if [[ "$BASH_PROFILE_CONFIGURED" -ne 0 ]]; then
+    echo "Add $DOCKER_DEVBOX_BIN to path (.bash_profile)" 2>&1 |& tee -a "$_LOG"
+
+    cat << EOF >> "$HOME/.bash_profile"
+
+# Add docker-devbox bin to PATH
+export PATH="$DOCKER_DEVBOX_BIN:\$PATH"
+EOF
+  fi
 fi
+
+export PATH="$DOCKER_DEVBOX_BIN:$PATH"
 
 if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
-    _CFSSL_CLI_VERSION=$(curl -s https://api.github.com/repos/Toilal/python-cfssl-cli/releases/latest | grep 'tag_name' | cut -d\" -f4)
-    echo "Install cfssl-cli ($_CFSSL_CLI_VERSION)" 2>&1 |& tee "$_LOG"
+    if [ -z "$(command -v curl)" ]; then
+      if [[ ! -x "$SUDO_EXE" && $EUID -ne 0 ]]; then
+        echo "Sudo is not available to install curl. Install 'curl' package manually and run the installer again."
+        exit 1
+      fi
+      if [[ -z "$PACKAGE_INSTALL_COMMAND" ]]; then
+        echo "No package manager found to install curl. Install 'curl' package manually and run the installer again."
+        exit 1
+      fi
 
-    curl -sL -o ./cfssl-cli https://github.com/Toilal/python-cfssl-cli/releases/download/$_CFSSL_CLI_VERSION/cfssl-cli &>> "$_LOG"
-    mv ./cfssl-cli -f "$DOCKER_DEVBOX_BIN" &>> "$_LOG" || sudo mv -f ./cfssl-cli "$DOCKER_DEVBOX_BIN" &>> "$_LOG"
-    chmod +x "$DOCKER_DEVBOX_BIN"/cfssl-cli &>> "$_LOG" || sudo chmod +x "$DOCKER_DEVBOX_BIN"/cfssl-cli &>> "$_LOG"
+      echo "Install curl" 2>&1 | tee -a "$_LOG"
+      $SUDO_EXE $PACKAGE_INSTALL_COMMAND curl &>> "$_LOG"
+    fi
 
-    _MKCERT_VERSION=$(curl -s https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep 'tag_name' | cut -d\" -f4)
-    echo "Install mkcert ($_MKCERT_VERSION)" 2>&1 |& tee "$_LOG"
+    if [ -z "$(command -v cfssl-cli)" ]; then
+      _CFSSL_CLI_VERSION=$(curl -s https://api.github.com/repos/Toilal/python-cfssl-cli/releases/latest | grep 'tag_name' | cut -d\" -f4)
+      echo "Install cfssl-cli ($_CFSSL_CLI_VERSION)" 2>&1 |& tee "$_LOG"
 
-    curl -fsSL -o ./mkcert "https://github.com/FiloSottile/mkcert/releases/download/$_MKCERT_VERSION/mkcert-$_MKCERT_VERSION-linux-amd64" &>> "$_LOG"
-    mv -f ./mkcert "$DOCKER_DEVBOX_BIN" &>> "$_LOG" || sudo mv -f ./mkcert "$DOCKER_DEVBOX_BIN" &>> "$_LOG"
-    chmod +x "$DOCKER_DEVBOX_BIN"/mkcert &>> "$_LOG" || sudo chmod +x "$DOCKER_DEVBOX_BIN"/mkcert &>> "$_LOG"
+      curl -sL -o ./cfssl-cli https://github.com/Toilal/python-cfssl-cli/releases/download/$_CFSSL_CLI_VERSION/cfssl-cli &>> "$_LOG"
+      mv -f ./cfssl-cli "$DOCKER_DEVBOX_BIN" &>> "$_LOG"
+      chmod +x "$DOCKER_DEVBOX_BIN"/cfssl-cli &>> "$_LOG"
+    fi
+
+    if [ -z "$(command -v mkcert)" ]; then
+      _MKCERT_VERSION=$(curl -s https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep 'tag_name' | cut -d\" -f4)
+      echo "Install mkcert ($_MKCERT_VERSION)" 2>&1 |& tee "$_LOG"
+
+      curl -fsSL -o ./mkcert "https://github.com/FiloSottile/mkcert/releases/download/$_MKCERT_VERSION/mkcert-$_MKCERT_VERSION-linux-amd64" &>> "$_LOG"
+      mv -f ./mkcert "$DOCKER_DEVBOX_BIN" &>> "$_LOG"
+      chmod +x "$DOCKER_DEVBOX_BIN"/mkcert &>> "$_LOG"
+    fi
 fi
 
 echo "Create $DOCKER_DEVBOX_REVERSE_PROXY_NETWORK docker network" 2>&1 |& tee -a "$_LOG"
@@ -125,7 +210,7 @@ EOF
 
         cat $HOME/.bashrc | grep .smartcd_config &> /dev/null
         BASHRC_CONFIGURED=$?
-        if [ "$BASHRC_CONFIGURED" != "0" ]; then
+        if [[ "$BASHRC_CONFIGURED" -ne 0 ]]; then
             cat << 'EOF' >> "$HOME/.bashrc"
 
 # SmartCD Configuration
