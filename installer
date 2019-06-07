@@ -236,9 +236,7 @@ EOF
        echo "Install CFSSL" 2>&1 |& tee -a "$_LOG"
        dc pull &>> "$_LOG" || true
        echo "Start CFSSL" 2>&1 |& tee -a "$_LOG"
-       dc up -d &>> "$_LOG"
-       sleep 10 &>> "$_LOG"
-       install-cfssl-ca &>> "$_LOG"
+       dc up --build -d &>> "$_LOG"
     else
         echo "CFSSL is disabled" 2>&1 |& tee -a "$_LOG"
     fi
@@ -253,7 +251,7 @@ EOF
          echo "Install portainer" 2>&1 |& tee -a "$_LOG"
          dc pull &>> "$_LOG" || true
          echo "Start portainer" 2>&1 |& tee -a "$_LOG"
-         dc up -d &>> "$_LOG"
+         dc up --build -d &>> "$_LOG"
     else
         echo "Portainer is disabled" 2>&1 |& tee -a "$_LOG"
     fi
@@ -276,7 +274,7 @@ EOF
             echo "Install traefik" 2>&1 |& tee -a "$_LOG"
             dc pull &>> "$_LOG" || true
             echo "Start traefik" 2>&1 |& tee -a "$_LOG"
-            dc up -d &>> "$_LOG"
+            dc up --build -d &>> "$_LOG"
             source .bash_leave &>> "$_LOG"
             cd $HOME &>> "$_LOG"
         else
@@ -293,7 +291,7 @@ EOF
             echo "Install nginx-proxy" 2>&1 |& tee -a "$_LOG"
             dc pull &>> "$_LOG" || true
             echo "Start nginx-proxy" 2>&1 |& tee -a "$_LOG"
-            dc up -d &>> "$_LOG"
+            dc up --build -d &>> "$_LOG"
             source .bash_leave &>> "$_LOG"
             cd $HOME &>> "$_LOG"
         fi
