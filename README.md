@@ -33,12 +33,8 @@ VirtualBox VM based on Ubuntu Server.
 curl -L https://github.com/gfi-centre-ouest/docker-devbox/raw/master/installer | bash
 ```
 
-This will install everything required for Docker Devbox, including the following tools:
-
-* make
-* [jq](https://stedolan.github.io/jq/)
-* [cfssl-cli](https://github.com/Toilal/python-cfssl-cli)
-* [mkcert](https://github.com/FiloSottile/mkcert)
+This will install everything required for Docker Devbox (docker, docker-compose and bash should be installed manually 
+before)
 
 *Installation script may ask for sudo password to install those dependencies.*
 
@@ -63,7 +59,6 @@ curl -L https://github.com/gfi-centre-ouest/docker-devbox/raw/master/installer |
 DOCKER_DEVBOX_CI=1 \
 bash
 ```
-
 
 # .test as a docker host domain
 
@@ -92,4 +87,6 @@ sudo sh -c "echo address=/.test/$DOCKER_HOST_IP>/etc/NetworkManager/dnsmasq.d/te
 sudo service NetworkManager restart
 ```
 
-# Quick migration from previous version
+# Migration
+
+Please read [MIGRATION.md](./MIGRATION.md) to migration machine and projects from previous version.
