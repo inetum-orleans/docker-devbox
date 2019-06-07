@@ -2,3 +2,5 @@
 /bin/cfssl-cli
 /bin/mkcert
 /bin/.mkcert.version
+/bin/jq
+/bin/yq

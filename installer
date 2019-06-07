@@ -132,6 +132,14 @@ if [[ ! -x "$(command -v jq)" ]]; then
   chmod +x "$DOCKER_DEVBOX_BIN"/jq &>> "$_LOG"
 fi
 
+if [[ ! -x "$(command -v yq)" ]]; then
+  _install_package_if_missing "curl"
+
+  echo "Install yq" 2>&1 |& tee "$_LOG"
+  curl -sL -o "$DOCKER_DEVBOX_BIN"/yq "https://github.com/mikefarah/yq/releases/download/2.4.0/yq_linux_amd64" &>> "$_LOG"
+  chmod +x "$DOCKER_DEVBOX_BIN"/yq &>> "$_LOG"
+fi
+
 if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
     _CFSSL_CLI_VERSION=$(curl -s https://api.github.com/repos/Toilal/python-cfssl-cli/releases/latest | grep 'tag_name' | cut -d\" -f4)
     _CFSSL_CLI_INSTALL=1
