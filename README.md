@@ -43,10 +43,10 @@ curl -L https://github.com/gfi-centre-ouest/docker-devbox/raw/master/installer |
 ```
 
 This will install everything required for Docker Devbox, but docker, docker-compose and bash should be installed manually 
-before. 
+before.
 
-Docker Devbox will install [Traefik](https://traefik.io/) in a docker container and binds `tcp/80`,`tcp/443` and `tcp/8080` 
-to host, so those ports should be available. 
+Docker Devbox will install [Traefik](https://traefik.io/) in a docker container and binds `tcp/80`,`tcp/443` to host, 
+so those ports should be available.
 
 Port `tcp/7780` should also be available for CFSSL container (local certificate authority service).
 
