@@ -122,6 +122,12 @@ DOCKER_DEVBOX_CI=1 \
 bash
 ```
 
+# Initialize a new project
+
+Use [Yeoman](https://yeoman.io/) with [gfi-centre-ouest/generator-docker-devbox](https://github.com/gfi-centre-ouest/generator-docker-devbox) generator to scaffold a new project from interactive questions.
+
+As an alternative, you may grab a sample project from [gfi-centre-ouest/docker-devbox-examples](https://github.com/gfi-centre-ouest/docker-devbox-examples) repository, and edit to fit your needs.
+
 # Migration
 
 Please read [MIGRATION.md](./MIGRATION.md) to migration machine and projects from previous version.
