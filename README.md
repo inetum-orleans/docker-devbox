@@ -128,6 +128,25 @@ Use [Yeoman](https://yeoman.io/) with [gfi-centre-ouest/generator-docker-devbox]
 
 As an alternative, you may grab a sample project from [gfi-centre-ouest/docker-devbox-examples](https://github.com/gfi-centre-ouest/docker-devbox-examples) repository, and edit to fit your needs.
 
+## Make project commands available globally
+
+If you need to access some commands from a docker-devbox project globally from any other directory inside your host, 
+you may run the following command from the project directory.
+
+```
+docker-devbox bin global
+```
+
+This bring the project commands from projects `.bin` directory into the current user `~/bin` directory, and configures 
+them for an external usage. This directory is in the user `PATH` by default on most linux distribution, but you may 
+have to restart the shell at the first time.
+
+To remove global commands from a project, run the following command from the project directory.
+
+```
+docker-devbox bin local
+```
+
 # Migration
 
 Please read [MIGRATION.md](./MIGRATION.md) to migration machine and projects from previous version.
