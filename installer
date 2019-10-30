@@ -243,21 +243,6 @@ EOF
     source .bash_leave &>> "$_LOG"
     cd $HOME &>> "$_LOG"
 
-    cd "${DOCKER_DEVBOX_HOME}"/portainer &>> "$_LOG"
-    source .bash_enter &>> "$_LOG"
-    echo "Stop portainer" 2>&1 |& tee -a "$_LOG"
-    dc down --remove-orphans &>> "$_LOG"
-    if [[ -z "${DOCKER_DEVBOX_DISABLE_PORTAINER}" ]]; then
-         echo "Install portainer" 2>&1 |& tee -a "$_LOG"
-         dc pull &>> "$_LOG" || true
-         echo "Start portainer" 2>&1 |& tee -a "$_LOG"
-         dc up --build -d &>> "$_LOG"
-    else
-        echo "Portainer is disabled" 2>&1 |& tee -a "$_LOG"
-    fi
-    source .bash_leave &>> "$_LOG"
-    cd $HOME &>> "$_LOG"
-
     if [[ -z "${DOCKER_DEVBOX_DISABLE_REVERSE_PROXY}" ]]; then
         if [[ -z "${DOCKER_DEVBOX_USE_NGINX_PROXY}" ]]
         then
@@ -298,6 +283,21 @@ EOF
     else
         echo "Reverse proxy is disabled" 2>&1 |& tee -a "$_LOG"
     fi
+
+    cd "${DOCKER_DEVBOX_HOME}"/portainer &>> "$_LOG"
+    source .bash_enter &>> "$_LOG"
+    echo "Stop portainer" 2>&1 |& tee -a "$_LOG"
+    dc down --remove-orphans &>> "$_LOG"
+    if [[ -z "${DOCKER_DEVBOX_DISABLE_PORTAINER}" ]]; then
+         echo "Install portainer" 2>&1 |& tee -a "$_LOG"
+         dc pull &>> "$_LOG" || true
+         echo "Start portainer" 2>&1 |& tee -a "$_LOG"
+         dc up --build -d &>> "$_LOG"
+    else
+        echo "Portainer is disabled" 2>&1 |& tee -a "$_LOG"
+    fi
+    source .bash_leave &>> "$_LOG"
+    cd $HOME &>> "$_LOG"
 
     echo "Docker Devbox installation is terminated." 2>&1 |& tee -a "$_LOG"
 else
