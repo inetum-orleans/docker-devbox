@@ -229,12 +229,12 @@ EOF
     fi
 
     echo "Cleanup project configuration files" &>> "$_LOG"
-    rm -f traefik/acme.json &>> "$_LOG"
-    rm -f traefik/config/*.toml &>> "$_LOG"
-    rm -f nginx-proxy/vhost.d/* &>> "$_LOG"
-    rm -f nginx-proxy/config/* &>> "$_LOG"
-    rm -f certs/*.crt &>> "$_LOG"
-    rm -f certs/*.key &>> "$_LOG"
+    rm -f "$DOCKER_DEVBOX_HOME"/traefik/acme.json &>> "$_LOG"
+    rm -f "$DOCKER_DEVBOX_HOME"/traefik/config/*.toml &>> "$_LOG"
+    rm -f "$DOCKER_DEVBOX_HOME"/nginx-proxy/vhost.d/* &>> "$_LOG"
+    rm -f "$DOCKER_DEVBOX_HOME"/nginx-proxy/config/* &>> "$_LOG"
+    rm -f "$DOCKER_DEVBOX_HOME"/certs/*.crt &>> "$_LOG"
+    rm -f "$DOCKER_DEVBOX_HOME"/certs/*.key &>> "$_LOG"
 
     if [[ -z "${DOCKER_DEVBOX_DISABLE_REVERSE_PROXY}" ]]; then
         if [[ -z "${DOCKER_DEVBOX_USE_NGINX_PROXY}" ]]
