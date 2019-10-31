@@ -35,6 +35,7 @@ VirtualBox VM based on Ubuntu Server.
 * Docker >= 18.09.6
 * docker-compose >= 1.24.0
 * GNU Bash
+* curl
 
 # Install or Update
 
