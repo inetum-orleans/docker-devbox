@@ -13,3 +13,6 @@
 [submodule "cfssl"]
 	path = cfssl
 	url = https://github.com/gfi-centre-ouest/docker-devbox-cfssl.git
+[submodule "ddb"]
+	path = ddb
+	url = https://github.com/gfi-centre-ouest/docker-devbox-ddb.git
