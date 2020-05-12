@@ -75,21 +75,23 @@ fi
 
 export DOCKER_DEVBOX_REVERSE_PROXY_NETWORK="${DOCKER_DEVBOX_REVERSE_PROXY_NETWORK:-reverse-proxy}"
 
+DOCKER_DEVBOX_BRANCH="${DOCKER_DEVBOX_BRANCH-master}"
+
 if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
     if [[ -z "${DOCKER_DEVBOX_DISABLE_UPDATE}" ]]; then
         echo "Update Docker Devbox" 2>&1 |& tee -a "$_LOG"
         git -C "${DOCKER_DEVBOX_HOME}" fetch --recurse-submodules &>> "$_LOG"
-        git -C "${DOCKER_DEVBOX_HOME}" reset --hard origin/master  &>> "$_LOG"
-        git -C "${DOCKER_DEVBOX_HOME}" submodule foreach --recursive git reset --hard origin/master &>> "$_LOG"
+        git -C "${DOCKER_DEVBOX_HOME}" reset --hard origin/$DOCKER_DEVBOX_BRANCH  &>> "$_LOG"
+        git -C "${DOCKER_DEVBOX_HOME}" submodule foreach --recursive git reset --hard origin/$DOCKER_DEVBOX_BRANCH &>> "$_LOG"
     else
         echo "Docker Devbox update is disabled" 2>&1 |& tee -a "$_LOG"
     fi
 else
     echo "Install Docker Devbox" 2>&1 > "$_LOG"
     if [[ -z ${DOCKER_DEVBOX_MINIMAL} ]]; then
-      git clone --recurse-submodules https://github.com/gfi-centre-ouest/docker-devbox "${DOCKER_DEVBOX_HOME}"
+      git clone --recurse-submodules -b $DOCKER_DEVBOX_BRANCH https://github.com/gfi-centre-ouest/docker-devbox "${DOCKER_DEVBOX_HOME}"
     else
-      git clone https://github.com/gfi-centre-ouest/docker-devbox "${DOCKER_DEVBOX_HOME}"
+      git clone https://github.com/gfi-centre-ouest/docker-devbox -b $DOCKER_DEVBOX_BRANCH "${DOCKER_DEVBOX_HOME}"
       git -C "${DOCKER_DEVBOX_HOME}" submodule update --init scripts
     fi
 fi
