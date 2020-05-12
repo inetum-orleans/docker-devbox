@@ -4,6 +4,10 @@ docker-devbox
 Docker Devbox is a set of tools build on top of Docker that automates environments setup for web applications, from 
 development to production.
 
+It relies on [ddb](https://gfi-centre-ouest.github.io/docker-devbox-ddb/), a command line tool that provides 
+features to generate, activate and adjust configuration files based on a single overridable and extendable 
+configuration, while enhancing the developer experience and reducing manual operations.
+
 # Design goals
 
 * Give the developer a clear and native experience, but use docker containers under the hood.
@@ -166,13 +170,10 @@ mkcert -install
 Environment variables available for installer script:
 
 - `DOCKER_DEVBOX_MINIMAL`: Clone docker-devbox repository and create reverse-proxy network only.
-- `DOCKER_DEVBOX_BIN`: Directory available in PATH where tools (cfssl-cli, mkcert) will be installed. Default is `/usr/local/bin`.
-- `DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES`: Disable optional dependencies installation.
 - `DOCKER_DEVBOX_DISABLE_SMARTCD`: Disable SmartCD.
 - `DOCKER_DEVBOX_DISABLE_CFSSL`: Disable CFSSL.
 - `DOCKER_DEVBOX_DISABLE_PORTAINER`: Disable portainer.
-- `DOCKER_DEVBOX_DISABLE_REVERSE_PROXY`: Disable reverse-proxy feature (both nginx-proxy and traefik).
-- `DOCKER_DEVBOX_USE_NGINX_PROXY`: Use nginx-proxy instead of traefik for reverse proxy.
+- `DOCKER_DEVBOX_DISABLE_REVERSE_PROXY`: Disable reverse-proxy feature.
 - `DOCKER_DEVBOX_DISABLE_UPDATE`: Disable update of docker-devbox. This may be useful when running installer right from
 local repository.
 - `DOCKER_DEVBOX_CI`: Equivalent to `DOCKER_DEVBOX_MINIMAL` and `DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES`, recommanded for CI.

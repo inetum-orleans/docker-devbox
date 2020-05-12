@@ -1,6 +1,3 @@
 /docker-devbox-installer.log
-/bin/cfssl-cli
-/bin/mkcert
-/bin/.mkcert.version
-/bin/jq
-/bin/yq
+cache/
+bin/

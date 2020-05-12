@@ -124,6 +124,14 @@ fi
 
 export PATH="$DOCKER_DEVBOX_BIN:$PATH"
 
+echo "Downloading ddb latest release" 2>&1 |& tee -a "$_LOG"
+curl -s https://api.github.com/repos/gfi-centre-ouest/docker-devbox-ddb/releases/latest \
+| grep "browser_download_url.*/ddb\"" \
+| cut -d : -f 2,3 \
+| tr -d \" \
+| wget -P "$DOCKER_DEVBOX_BIN" -O ddb -qi -
+chmod +x $DOCKER_DEVBOX_BIN/ddb
+
 if [[ ! -x "$(command -v jq)" ]]; then
   _install_package_if_missing "curl"
 
@@ -231,80 +239,51 @@ EOF
     echo "Cleanup project configuration files" &>> "$_LOG"
     rm -f "$DOCKER_DEVBOX_HOME"/traefik/acme.json &>> "$_LOG"
     rm -f "$DOCKER_DEVBOX_HOME"/traefik/config/*.toml &>> "$_LOG"
-    rm -f "$DOCKER_DEVBOX_HOME"/nginx-proxy/vhost.d/* &>> "$_LOG"
-    rm -f "$DOCKER_DEVBOX_HOME"/nginx-proxy/config/* &>> "$_LOG"
     rm -f "$DOCKER_DEVBOX_HOME"/certs/*.crt &>> "$_LOG"
     rm -f "$DOCKER_DEVBOX_HOME"/certs/*.key &>> "$_LOG"
 
     if [[ -z "${DOCKER_DEVBOX_DISABLE_REVERSE_PROXY}" ]]; then
-        if [[ -z "${DOCKER_DEVBOX_USE_NGINX_PROXY}" ]]
-        then
-            echo "Use traefik as reverse proxy"
-            cd "${DOCKER_DEVBOX_HOME}"/nginx-proxy &>> "$_LOG"
-            source .bash_enter &>> "$_LOG"
-            echo "Stop nginx-proxy" 2>&1 |& tee -a "$_LOG"
-            dc down --remove-orphans &>> "$_LOG"
-            source .bash_leave &>> "$_LOG"
-            cd "${DOCKER_DEVBOX_HOME}"/traefik &>> "$_LOG"
-            source .bash_enter &>> "$_LOG"
-            echo "Stop traefik" 2>&1 |& tee -a "$_LOG"
-            dc down --remove-orphans &>> "$_LOG"
-            echo "Install traefik" 2>&1 |& tee -a "$_LOG"
-            dc pull &>> "$_LOG" || true
-            echo "Start traefik" 2>&1 |& tee -a "$_LOG"
-            dc up --build -d &>> "$_LOG"
-            source .bash_leave &>> "$_LOG"
-            cd $HOME &>> "$_LOG"
-        else
-            echo "Use nginx-proxy as reverse proxy"
-            cd "${DOCKER_DEVBOX_HOME}"/traefik &>> "$_LOG"
-            source .bash_enter &>> "$_LOG"
-            echo "Stop traefik" 2>&1 |& tee -a "$_LOG"
-            dc down --remove-orphans &>> "$_LOG"
-            source .bash_leave &>> "$_LOG"
-            echo "Stop nginx-proxy" 2>&1 |& tee -a "$_LOG"
-            cd "${DOCKER_DEVBOX_HOME}"/nginx-proxy &>> "$_LOG"
-            source .bash_enter &>> "$_LOG"
-            dc down --remove-orphans &>> "$_LOG"
-            echo "Install nginx-proxy" 2>&1 |& tee -a "$_LOG"
-            dc pull &>> "$_LOG" || true
-            echo "Start nginx-proxy" 2>&1 |& tee -a "$_LOG"
-            dc up --build -d &>> "$_LOG"
-            source .bash_leave &>> "$_LOG"
-            cd $HOME &>> "$_LOG"
-        fi
+        echo "Use traefik as reverse proxy"
+        cd "${DOCKER_DEVBOX_HOME}"/traefik &>> "$_LOG"
+        echo "Stop traefik" 2>&1 |& tee -a "$_LOG"
+        docker-compose down --remove-orphans &>> "$_LOG"
+        echo "Install traefik" 2>&1 |& tee -a "$_LOG"
+        touch acme.json
+        ddb configure &>> "$_LOG" || true
+        docker-compose pull &>> "$_LOG" || true
+        echo "Start traefik" 2>&1 |& tee -a "$_LOG"
+        docker-compose up --build -d &>> "$_LOG"
+        cd $HOME &>> "$_LOG"
     else
         echo "Reverse proxy is disabled" 2>&1 |& tee -a "$_LOG"
     fi
 
     cd "${DOCKER_DEVBOX_HOME}"/cfssl &>> "$_LOG"
-    source .bash_enter &>> "$_LOG"
     echo "Stop CFSSL" 2>&1 |& tee -a "$_LOG"
-    dc down --remove-orphans &>> "$_LOG"
+    docker-compose down --remove-orphans &>> "$_LOG"
     if [[ -z "${DOCKER_DEVBOX_DISABLE_CFSSL}" ]]; then
        echo "Install CFSSL" 2>&1 |& tee -a "$_LOG"
-       dc pull &>> "$_LOG" || true
+       ddb configure &>> "$_LOG" || true
+       docker-compose pull &>> "$_LOG" || true
        echo "Start CFSSL" 2>&1 |& tee -a "$_LOG"
-       dc up --build -d &>> "$_LOG"
+       docker-compose up --build -d &>> "$_LOG"
     else
         echo "CFSSL is disabled" 2>&1 |& tee -a "$_LOG"
     fi
-    source .bash_leave &>> "$_LOG"
     cd $HOME &>> "$_LOG"
 
     cd "${DOCKER_DEVBOX_HOME}"/portainer &>> "$_LOG"
-    source .bash_enter &>> "$_LOG"
     echo "Stop portainer" 2>&1 |& tee -a "$_LOG"
-    dc down --remove-orphans &>> "$_LOG"
+    docker-compose down --remove-orphans &>> "$_LOG"
     if [[ -z "${DOCKER_DEVBOX_DISABLE_PORTAINER}" ]]; then
          echo "Install portainer" 2>&1 |& tee -a "$_LOG"
-         dc pull &>> "$_LOG" || true
+         ddb configure &>> "$_LOG" || true
+         docker-compose pull &>> "$_LOG" || true
          echo "Start portainer" 2>&1 |& tee -a "$_LOG"
-         dc up --build -d &>> "$_LOG"
+         docker-compose up --build -d &>> "$_LOG"
     else
         echo "Portainer is disabled" 2>&1 |& tee -a "$_LOG"
     fi
-    source .bash_leave &>> "$_LOG"
     cd $HOME &>> "$_LOG"
 
     echo "Docker Devbox installation is terminated." 2>&1 |& tee -a "$_LOG"
