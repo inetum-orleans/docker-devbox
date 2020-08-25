@@ -1,6 +1,7 @@
 /docker-devbox-installer.log
 cache/
 bin/
+.bin/
 ddb.yaml
 ddb.yml
 ddb.local.yaml
