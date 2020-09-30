@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-$HOME/.docker-devbox}"
+DOCKER_DEVBOX_BIN="${DOCKER_DEVBOX_HOME}/bin"
+
+echo "Upgrading ddb to latest release" 2>&1 |& tee -a "$_LOG"
+curl -s https://api.github.com/repos/gfi-centre-ouest/docker-devbox-ddb/releases/latest \
+| grep "browser_download_url.*/ddb\"" \
+| cut -d : -f 2,3 \
+| tr -d \" \
+| wget -O "$DOCKER_DEVBOX_BIN/ddb" -qi -
+chmod +x $DOCKER_DEVBOX_BIN/ddb
