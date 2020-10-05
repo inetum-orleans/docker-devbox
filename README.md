@@ -126,8 +126,8 @@ sudo -E $MKCERT_EXE -uninstall
 cd ~/.docker-devbox/cfssl
 
 # Replace default mkcert key/pair with CFSSL public key.
-sudo rm -Rf ../certs/mkcert-ca && mkdir -p ../certs/mkcert-ca
-docker cp $(docker-compose ps -q intermediate):/etc/cfssl/ca.pem ../certs/mkcert-ca/rootCA.pem
+rm -Rf $(mkcert -CAROOT) && mkdir -p $(mkcert -CAROOT)
+docker cp $(docker-compose ps -q intermediate):/etc/cfssl/ca.pem $(mkcert -CAROOT)/rootCA.pem
 
 # Install CFSSL CA Certificate with mkcert.
 sudo -E $MKCERT_EXE -install 
