@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-$HOME/.docker-devbox}"
+DOCKER_DEVBOX_TOOLBOX="${DOCKER_DEVBOX_HOME}/docker-toolbox"
 DOCKER_DEVBOX_BIN="${DOCKER_DEVBOX_HOME}/bin"
 
 if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
@@ -61,6 +62,16 @@ _install_package_if_missing() {
 
     echo "Install $PACKAGE" 2>&1 | tee -a "$_LOG"
     $SUDO_EXE $PACKAGE_INSTALL_COMMAND $PACKAGE &>> "$_LOG"
+  fi
+}
+
+_remove_containers() {
+  local CONTAINER="$1"
+
+  if [ $(docker ps --filter "name=${CONTAINER}" | wc -l) -gt 1 ]; then
+    echo "Removing container $CONTAINER" 2>&1 | tee -a "$_LOG"
+    docker stop $(docker ps -a -q --filter "name=${CONTAINER}") &>> "$_LOG"
+    docker rm $(docker ps -a -q --filter "name=${CONTAINER}") &>> "$_LOG"
   fi
 }
 
@@ -126,13 +137,17 @@ fi
 
 export PATH="$DOCKER_DEVBOX_BIN:$PATH"
 
-echo "Downloading ddb latest release" 2>&1 |& tee -a "$_LOG"
-curl -s https://api.github.com/repos/gfi-centre-ouest/docker-devbox-ddb/releases/latest \
-| grep "browser_download_url.*/ddb\"" \
-| cut -d : -f 2,3 \
-| tr -d \" \
-| wget -O "$DOCKER_DEVBOX_BIN/ddb" -qi -
-chmod +x $DOCKER_DEVBOX_BIN/ddb
+if [[ -z "${DOCKER_DEVBOX_DISABLE_DDB_UPDATE}" ]]; then
+  echo "Downloading ddb latest release" 2>&1 |& tee -a "$_LOG"
+  curl -s https://api.github.com/repos/gfi-centre-ouest/docker-devbox-ddb/releases/latest \
+  | grep "browser_download_url.*/ddb\"" \
+  | cut -d : -f 2,3 \
+  | tr -d \" \
+  | wget -O "$DOCKER_DEVBOX_BIN/ddb" -qi -
+  chmod +x $DOCKER_DEVBOX_BIN/ddb
+else
+    echo "DDB update is disabled" 2>&1 |& tee -a "$_LOG"
+fi
 
 if [[ ! -x "$(command -v jq)" ]]; then
   _install_package_if_missing "curl"
@@ -239,53 +254,60 @@ EOF
     fi
 
     echo "Cleanup project configuration files" &>> "$_LOG"
-    rm -f "$DOCKER_DEVBOX_HOME"/traefik/acme.json &>> "$_LOG"
-    rm -f "$DOCKER_DEVBOX_HOME"/traefik/config/*.toml &>> "$_LOG"
+    rm -f "$DOCKER_DEVBOX_TOOLBOX"/.docker/traefik/config/acme.json &>> "$_LOG"
+    rm -f "$DOCKER_DEVBOX_TOOLBOX"/.docker/traefik/hosts/*.toml &>> "$_LOG"
+    rm -f "$DOCKER_DEVBOX_TOOLBOX"/ddb.local.yaml &>> "$_LOG"
     rm -f "$DOCKER_DEVBOX_HOME"/certs/*.crt &>> "$_LOG"
     rm -f "$DOCKER_DEVBOX_HOME"/certs/*.key &>> "$_LOG"
 
+
+cat <<EOF > "$DOCKER_DEVBOX_TOOLBOX"/ddb.local.yaml
+project:
+  coredns:
+    enabled: true
+  cfssl:
+    enabled: true
+  portainer:
+    enabled: true
+  traefik:
+    enabled: true
+EOF
+
     if [[ -z "${DOCKER_DEVBOX_DISABLE_REVERSE_PROXY}" ]]; then
         echo "Use traefik as reverse proxy"
-        cd "${DOCKER_DEVBOX_HOME}"/traefik &>> "$_LOG"
-        echo "Stop traefik" 2>&1 |& tee -a "$_LOG"
-        docker-compose down --remove-orphans &>> "$_LOG"
-        echo "Install traefik" 2>&1 |& tee -a "$_LOG"
-        touch acme.json
-        ddb configure &>> "$_LOG" || true
-        docker-compose pull &>> "$_LOG" || true
-        echo "Start traefik" 2>&1 |& tee -a "$_LOG"
-        docker-compose up --build -d &>> "$_LOG"
-        cd $HOME &>> "$_LOG"
+        touch "$DOCKER_DEVBOX_TOOLBOX"/.docker/traefik/config/acme.json
     else
         echo "Reverse proxy is disabled" 2>&1 |& tee -a "$_LOG"
-    fi
-
-    cd "${DOCKER_DEVBOX_HOME}"/cfssl &>> "$_LOG"
-    echo "Stop CFSSL" 2>&1 |& tee -a "$_LOG"
-    docker-compose down --remove-orphans &>> "$_LOG"
-    if [[ -z "${DOCKER_DEVBOX_DISABLE_CFSSL}" ]]; then
-       echo "Install CFSSL" 2>&1 |& tee -a "$_LOG"
-       ddb configure &>> "$_LOG" || true
-       docker-compose pull &>> "$_LOG" || true
-       echo "Start CFSSL" 2>&1 |& tee -a "$_LOG"
-       docker-compose up --build -d &>> "$_LOG"
-    else
-        echo "CFSSL is disabled" 2>&1 |& tee -a "$_LOG"
+        yq w -d* -i "$DOCKER_DEVBOX_TOOLBOX"/ddb.local.yaml project.traefik.enabled false
     fi
     cd $HOME &>> "$_LOG"
 
-    cd "${DOCKER_DEVBOX_HOME}"/portainer &>> "$_LOG"
-    echo "Stop portainer" 2>&1 |& tee -a "$_LOG"
-    docker-compose down --remove-orphans &>> "$_LOG"
+    if [[ -z "${DOCKER_DEVBOX_DISABLE_CFSSL}" ]]; then
+       echo "Use CFSSL" 2>&1 |& tee -a "$_LOG"
+    else
+        echo "CFSSL is disabled" 2>&1 |& tee -a "$_LOG"
+        yq w -d* -i "$DOCKER_DEVBOX_TOOLBOX"/ddb.local.yaml project.cfssl.enabled false
+    fi
+    cd $HOME &>> "$_LOG"
+
     if [[ -z "${DOCKER_DEVBOX_DISABLE_PORTAINER}" ]]; then
-         echo "Install portainer" 2>&1 |& tee -a "$_LOG"
-         ddb configure &>> "$_LOG" || true
-         docker-compose pull &>> "$_LOG" || true
-         echo "Start portainer" 2>&1 |& tee -a "$_LOG"
-         docker-compose up --build -d &>> "$_LOG"
+         echo "Use portainer" 2>&1 |& tee -a "$_LOG"
     else
         echo "Portainer is disabled" 2>&1 |& tee -a "$_LOG"
+        yq w -d* -i "$DOCKER_DEVBOX_TOOLBOX"/ddb.local.yaml project.portainer.enabled false
     fi
+
+    cd $DOCKER_DEVBOX_TOOLBOX &>> "$_LOG"
+
+    _remove_containers "coredns"
+    _remove_containers "cfssl"
+    _remove_containers "portainer"
+    _remove_containers "traefik"
+
+    ddb configure &>> "$_LOG" || true
+    docker-compose pull &>> "$_LOG" || true
+    docker-compose up --build -d &>> "$_LOG"
+
     cd $HOME &>> "$_LOG"
 
     echo "Docker Devbox installation is terminated." 2>&1 |& tee -a "$_LOG"

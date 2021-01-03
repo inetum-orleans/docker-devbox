@@ -1,0 +1,35 @@
+defaultEntryPoints = ["http", "https"]
+
+[global]
+  checkNewVersion = false
+  sendAnonymousUsage = false
+
+#[log]
+#  level = "DEBUG"
+
+[api]
+
+[providers.docker]
+  exposedByDefault = false
+  network = "reverse-proxy"
+
+[providers.file]
+  directory = "/config/"
+  watch = true
+
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+  [entryPoints.https]
+  address = ":443"
+
+[tls.options]
+  [tls.options.default]
+    sniStrict = true
+
+[certificatesResolvers.letsencrypt.acme]
+  email = "{{project.traefik.acme_email}}"
+  storage = "acme.json"
+  # caServer = "https://acme-staging-v02.api.letsencrypt.org/directory"
+  [certificatesResolvers.letsencrypt.acme.httpChallenge]
+    entryPoint = "http"

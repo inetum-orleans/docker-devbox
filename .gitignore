@@ -1,3 +1,4 @@
+/.bin
 /docker-devbox-installer.log
 /cache/
 /bin/
@@ -5,3 +6,11 @@
 /ddb.yml
 /ddb.local.yaml
 /ddb.local.yml
+###> gfi-centre-ouest/docker-devbox ###
+/*ddb.local.*
+/.bash_enter
+/.bash_leave
+/target/cassandra.conf
+/target/init.sh
+/target/uwsgi.ini
+###< gfi-centre-ouest/docker-devbox ###

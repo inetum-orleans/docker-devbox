@@ -1,9 +1,0 @@
-###> gfi-centre-ouest/docker-devbox ###
-/docker-compose.yml
-/config/docker.devbox
-/*ddb.local.*
-/.bash_enter
-/.bash_leave
-/config/Corefile
-/.docker/coredns/Dockerfile
-###< gfi-centre-ouest/docker-devbox ###

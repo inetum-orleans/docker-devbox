@@ -1,0 +1,29 @@
+core:
+  env:
+    current: prod
+smartcd:
+  disabled: true
+docker:
+  port_prefix: 77
+permissions:
+  specs:
+    acme.json: '600'
+shell:
+  aliases:
+    getRootCA: docker cp $(dc ps -q cfssl-intermediate):/etc/cfssl/ca.pem rootCA.pem
+
+project:
+  cfssl:
+    enabled: true
+    chain: false
+  dns:
+    enabled: true
+    host: 192.168.154.128
+    servers:
+      - 192.168.1.122:53
+      - 8.8.8.8:53
+  portainer:
+    enabled: true
+  traefik:
+    enabled: true
+    acme_email: dummy-acme-email@gfi.world  # This mail should be customized in ddb.local.yml to authenticate with letsencrypt servers

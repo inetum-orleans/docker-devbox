@@ -7,5 +7,5 @@ $ORIGIN {{ core.domain.ext }}.
 1209600    ; expire (2 weeks)
 3600       ; minimum (1 hour)
 )
-@                            IN A     {{ dns.host }}
-*.{{ core.domain.ext }}.     IN A     {{ dns.host }}
+@                            IN A     {{ project.dns.host }}
+*.{{ core.domain.ext }}.     IN A     {{ project.dns.host }}

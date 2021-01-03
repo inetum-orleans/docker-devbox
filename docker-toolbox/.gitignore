@@ -1,0 +1,12 @@
+/rootCA.pem
+###> gfi-centre-ouest/docker-devbox ###
+/docker-compose.yml
+/*ddb.local.*
+/.bin
+/.certs
+/.docker/coredns/Dockerfile
+/.docker/coredns/config/Corefile
+/.docker/coredns/config/docker.devbox
+/.docker/traefik/config/acme.json
+/.docker/traefik/config/traefik.toml
+###< gfi-centre-ouest/docker-devbox ###

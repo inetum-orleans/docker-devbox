@@ -1,8 +1,0 @@
-core:
-  env:
-    current: prod
-dns:
-  host: 192.168.154.128
-  servers:
-    - 192.168.1.122:53
-    - 8.8.8.8:53
