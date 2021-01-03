@@ -1,0 +1,11 @@
+$TTL 60
+$ORIGIN {{ core.domain.ext }}.
+@                   IN	SOA sns.dns.icann.org. noc.dns.icann.org. (
+2021010301 ; serial
+7200       ; refresh (2 hours)
+3600       ; retry (1 hour)
+1209600    ; expire (2 weeks)
+3600       ; minimum (1 hour)
+)
+@                            IN A     {{ dns.host }}
+*.{{ core.domain.ext }}.     IN A     {{ dns.host }}
