@@ -14,7 +14,7 @@ local cfssl_chain = std.extVar("project.cfssl.chain");
 
 ddb.Compose() {
     services: {
-        [if std.extVar('project.dns.enabled') then "coredns"]:
+        [if std.extVar('project.coredns.enabled') then "coredns"]:
             ddb.Build('coredns')
             + {
                 expose: [

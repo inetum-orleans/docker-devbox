@@ -260,11 +260,16 @@ EOF
     rm -f "$DOCKER_DEVBOX_HOME"/certs/*.crt &>> "$_LOG"
     rm -f "$DOCKER_DEVBOX_HOME"/certs/*.key &>> "$_LOG"
 
+if [[ -z "${DOCKER_DEVBOX_DNS_SERVERS}" ]]; then
+  DOCKER_DEVBOX_DNS_SERVERS="8.8.8.8:53"
+fi
 
 cat <<EOF > "$DOCKER_DEVBOX_TOOLBOX"/ddb.local.yaml
 project:
   coredns:
     enabled: true
+    host: $(ip address | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p' | head -n 1)
+    servers: ${DOCKER_DEVBOX_DNS_SERVERS}
   cfssl:
     enabled: true
   portainer:

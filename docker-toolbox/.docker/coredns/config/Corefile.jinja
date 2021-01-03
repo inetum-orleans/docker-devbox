@@ -1,6 +1,6 @@
 .:53 {
     file /etc/coredns/docker.devbox {{ core.domain.ext }}
-    forward . {% for server in project.dns.servers %}{{ server }} {% endfor %}
+    forward . {{ project.dns.servers }}
     errors stdout
     log stdout
 }
