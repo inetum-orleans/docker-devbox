@@ -123,11 +123,11 @@ MKCERT_EXE=$(command -v mkcert)
 sudo -E $MKCERT_EXE -uninstall
 
 # Move to cfssl container directory
-cd ~/.docker-devbox/cfssl
+cd ~/.docker-devbox/docker-toolbox
 
 # Replace default mkcert key/pair with CFSSL public key.
 sudo rm -Rf ../certs/mkcert-ca && mkdir -p ../certs/mkcert-ca
-docker cp $(dc ps -q intermediate):/etc/cfssl/ca.pem ../certs/mkcert-ca/rootCA.pem
+docker cp $(docker-compose ps -q cfssl-intermediate):/etc/cfssl/ca.pem ../certs/mkcert-ca/rootCA.pem
 
 # Install CFSSL CA Certificate with mkcert.
 sudo -E $MKCERT_EXE -install 
@@ -147,7 +147,7 @@ to some directory, like `C:\mkcert-ca`.
 ```
 # Inside docker-devbox shell
 cd ~/.docker-devbox/cfssl
-docker cp $(dc ps -q intermediate):/etc/cfssl/ca.pem ../certs/mkcert-ca/rootCA.pem
+docker cp $(docker-compose ps -q cfssl-intermediate):/etc/cfssl/ca.pem ../certs/mkcert-ca/rootCA.pem
 ```
 
 - Copy `~/.docker-devbox/certs/mkcert-ca/rootCA.pem` to the host, inside `CAROOT` 
@@ -179,6 +179,7 @@ Environment variables available for installer script:
   right from local repository.
 - `DOCKER_DEVBOX_CI`: Equivalent to `DOCKER_DEVBOX_MINIMAL` and `DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES`, recommanded for CI.
 - `DOCKER_DEVBOX_BRANCH`: Use a custom docker-devbox branch.
+- `DOCKER_DEVBOX_DNS_SERVERS`: Use to define fallback DNS Servers for `coredns`. By default, it is set to 8.8.8.8:53
 
 Environment variables can be set right before bash invocation in the installer one-liner.
 

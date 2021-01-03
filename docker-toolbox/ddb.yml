@@ -10,7 +10,7 @@ permissions:
     acme.json: '600'
 shell:
   aliases:
-    getRootCA: docker cp $(dc ps -q cfssl-intermediate):/etc/cfssl/ca.pem rootCA.pem
+    getRootCA: docker cp $(docker-compose ps -q cfssl-intermediate):/etc/cfssl/ca.pem rootCA.pem
 
 project:
   cfssl:
