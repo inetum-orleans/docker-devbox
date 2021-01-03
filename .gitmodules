@@ -1,15 +1,3 @@
-[submodule "portainer"]
-	path = portainer
-	url = https://github.com/gfi-centre-ouest/docker-devbox-portainer
-[submodule "traefik"]
-	path = traefik
-	url = https://github.com/gfi-centre-ouest/docker-devbox-traefik
 [submodule "scripts"]
 	path = scripts
 	url = https://github.com/gfi-centre-ouest/docker-devbox-scripts
-[submodule "cfssl"]
-	path = cfssl
-	url = https://github.com/gfi-centre-ouest/docker-devbox-cfssl.git
-[submodule "ddb"]
-	path = ddb
-	url = https://github.com/gfi-centre-ouest/docker-devbox-ddb.git
