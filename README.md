@@ -146,7 +146,7 @@ to some directory, like `C:\mkcert-ca`.
 
 ```
 # Inside docker-devbox shell
-cd ~/.docker-devbox/cfssl
+cd ~/.docker-devbox/docker-toolbox
 docker cp $(docker-compose ps -q cfssl-intermediate):/etc/cfssl/ca.pem ../certs/mkcert-ca/rootCA.pem
 ```
 
