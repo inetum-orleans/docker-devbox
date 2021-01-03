@@ -260,8 +260,10 @@ EOF
     rm -f "$DOCKER_DEVBOX_HOME"/certs/*.crt &>> "$_LOG"
     rm -f "$DOCKER_DEVBOX_HOME"/certs/*.key &>> "$_LOG"
 
-if [[ -z "${DOCKER_DEVBOX_DNS_SERVERS}" ]]; then
+if [[ -z "${DNS_SERVERS}" ]]; then
   DOCKER_DEVBOX_DNS_SERVERS="8.8.8.8:53"
+else
+  DOCKER_DEVBOX_DNS_SERVERS="${DNS_SERVERS}"
 fi
 
 cat <<EOF > "$DOCKER_DEVBOX_TOOLBOX"/ddb.local.yaml
@@ -278,6 +280,7 @@ project:
     enabled: true
 EOF
 
+#    Traefik Activation
     if [[ -z "${DOCKER_DEVBOX_DISABLE_REVERSE_PROXY}" ]]; then
         echo "Use traefik as reverse proxy"
         touch "$DOCKER_DEVBOX_TOOLBOX"/.docker/traefik/config/acme.json
@@ -285,21 +288,29 @@ EOF
         echo "Reverse proxy is disabled" 2>&1 |& tee -a "$_LOG"
         yq w -d* -i "$DOCKER_DEVBOX_TOOLBOX"/ddb.local.yaml project.traefik.enabled false
     fi
-    cd $HOME &>> "$_LOG"
 
+#    CFSSL Activation
     if [[ -z "${DOCKER_DEVBOX_DISABLE_CFSSL}" ]]; then
        echo "Use CFSSL" 2>&1 |& tee -a "$_LOG"
     else
         echo "CFSSL is disabled" 2>&1 |& tee -a "$_LOG"
         yq w -d* -i "$DOCKER_DEVBOX_TOOLBOX"/ddb.local.yaml project.cfssl.enabled false
     fi
-    cd $HOME &>> "$_LOG"
 
+#    Portainer Activation
     if [[ -z "${DOCKER_DEVBOX_DISABLE_PORTAINER}" ]]; then
          echo "Use portainer" 2>&1 |& tee -a "$_LOG"
     else
         echo "Portainer is disabled" 2>&1 |& tee -a "$_LOG"
         yq w -d* -i "$DOCKER_DEVBOX_TOOLBOX"/ddb.local.yaml project.portainer.enabled false
+    fi
+
+#    CoreDNS Activation
+    if [[ -z "${DOCKER_DEVBOX_DISABLE_COREDNS}" ]]; then
+         echo "Use CoreDNS" 2>&1 |& tee -a "$_LOG"
+    else
+        echo "CoreDNS is disabled" 2>&1 |& tee -a "$_LOG"
+        yq w -d* -i "$DOCKER_DEVBOX_TOOLBOX"/ddb.local.yaml project.coredns.enabled false
     fi
 
     cd $DOCKER_DEVBOX_TOOLBOX &>> "$_LOG"

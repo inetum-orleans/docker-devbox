@@ -12,7 +12,7 @@ local portainer_domain = std.join('.', ["portainer", domain_ext]);
 
 local cfssl_chain = std.extVar("project.cfssl.chain");
 
-ddb.Compose() {
+ddb.Compose({
     services: {
         [if std.extVar('project.coredns.enabled') then "coredns"]:
             ddb.Build('coredns')
@@ -105,4 +105,4 @@ ddb.Compose() {
                 ]
             }
     }
-}
+})

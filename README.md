@@ -172,6 +172,7 @@ Environment variables available for installer script:
 - `DOCKER_DEVBOX_MINIMAL`: Clone docker-devbox repository and create reverse-proxy network only.
 - `DOCKER_DEVBOX_DISABLE_SMARTCD`: Disable SmartCD.
 - `DOCKER_DEVBOX_DISABLE_CFSSL`: Disable CFSSL.
+- `DOCKER_DEVBOX_DISABLE_COREDNS`: Disable CoreDNS.
 - `DOCKER_DEVBOX_DISABLE_PORTAINER`: Disable portainer.
 - `DOCKER_DEVBOX_DISABLE_REVERSE_PROXY`: Disable reverse-proxy feature.
 - `DOCKER_DEVBOX_DISABLE_UPDATE`: Disable update of docker-devbox. This may be useful when running installer right from
@@ -179,7 +180,6 @@ Environment variables available for installer script:
   right from local repository.
 - `DOCKER_DEVBOX_CI`: Equivalent to `DOCKER_DEVBOX_MINIMAL` and `DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES`, recommanded for CI.
 - `DOCKER_DEVBOX_BRANCH`: Use a custom docker-devbox branch.
-- `DOCKER_DEVBOX_DNS_SERVERS`: Use to define fallback DNS Servers for `coredns`. By default, it is set to 8.8.8.8:53
 
 Environment variables can be set right before bash invocation in the installer one-liner.
 
