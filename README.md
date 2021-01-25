@@ -4,7 +4,7 @@ docker-devbox
 Docker Devbox is a set of tools build on top of Docker that automates environments setup for web applications, from 
 development to production.
 
-It relies on [ddb](https://gfi-centre-ouest.github.io/docker-devbox-ddb/), a command line tool that provides 
+It relies on [ddb](https://inetum-orleans.github.io/docker-devbox-ddb/), a command line tool that provides 
 features to generate, activate and adjust configuration files based on a single overridable and extendable 
 configuration, while enhancing the developer experience and reducing manual operations.
 
@@ -33,7 +33,7 @@ configuration, while enhancing the developer experience and reducing manual oper
 # Requirements
 
 Docker Devbox runs natively on any Linux only, but Windows and MacOS users may use 
-[docker-devbox-vagrant](https://github.com/gfi-centre-ouest/docker-devbox-vagrant) to run it inside a Vagrant managed 
+[docker-devbox-vagrant](https://github.com/inetum-orleans/docker-devbox-vagrant) to run it inside a Vagrant managed 
 VirtualBox VM based on Ubuntu Server.
 
 * Docker >= 18.09.6
@@ -44,7 +44,7 @@ VirtualBox VM based on Ubuntu Server.
 # Install or Update
 
 ```
-curl -L https://github.com/gfi-centre-ouest/docker-devbox/raw/master/installer | bash
+curl -L https://github.com/inetum-orleans/docker-devbox/raw/master/installer | bash
 ```
 
 This will install everything required for Docker Devbox, but docker, docker-compose and bash should be installed manually 
@@ -182,16 +182,16 @@ local repository.
 Environment variables can be set right before bash invocation in the installer one-liner.
 
 ```bash
-curl -L https://github.com/gfi-centre-ouest/docker-devbox/raw/master/installer | \
+curl -L https://github.com/inetum-orleans/docker-devbox/raw/master/installer | \
 DOCKER_DEVBOX_CI=1 \
 bash
 ```
 
 # Initialize a new project
 
-Use [Yeoman](https://yeoman.io/) with [gfi-centre-ouest/generator-docker-devbox](https://github.com/gfi-centre-ouest/generator-docker-devbox) generator to scaffold a new project from interactive questions.
+Use [Yeoman](https://yeoman.io/) with [inetum-orleans/generator-docker-devbox](https://github.com/inetum-orleans/generator-docker-devbox) generator to scaffold a new project from interactive questions.
 
-As an alternative, you may grab a sample project from [gfi-centre-ouest/docker-devbox-examples](https://github.com/gfi-centre-ouest/docker-devbox-examples) repository, and edit to fit your needs.
+As an alternative, you may grab a sample project from [inetum-orleans/docker-devbox-examples](https://github.com/inetum-orleans/docker-devbox-examples) repository, and edit to fit your needs.
 
 ## Make project commands available globally
 

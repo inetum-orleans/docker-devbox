@@ -3,11 +3,11 @@ Migration
 
 This is a migration document for people using old project skeletons based on a hard-coded `nginx-proxy` network inside 
 `docker-compose.override.dev.yml`. Those projects were most commonly generated with 
-[generator-docker-devbox](https://github.com/gfi-centre-ouest/generator-docker-devbox) < 1.4.
+[generator-docker-devbox](https://github.com/inetum-orleans/generator-docker-devbox) < 1.4.
 
-New projects generated with [generator-docker-devbox](https://github.com/gfi-centre-ouest/generator-docker-devbox) >= 1.4 
+New projects generated with [generator-docker-devbox](https://github.com/inetum-orleans/generator-docker-devbox) >= 1.4 
 can use any of nginx-proxy and traefik as reverse proxy, but requires a local installation of 
-[docker-devbox](https://github.com/gfi-centre-ouest/docker-devbox). 
+[docker-devbox](https://github.com/inetum-orleans/docker-devbox). 
 
 Keep in mind that a single reverse proxy can run at the same time on the host (either nginx-proxy or traefik).
 
@@ -25,16 +25,16 @@ docker rm -f nginx-proxy nginx-proxy-fallback portainer
 ```
 
 - Add system environment variables
-[defined here](https://github.com/gfi-centre-ouest/docker-devbox-vagrant/blob/master/config.example.yaml#L11-L18) 
-(Could be defined in `.bashrc`, or inside `config.yaml` for [docker-devbox-vagrant](https://github.com/gfi-centre-ouest/docker-devbox-vagrant) users)
+[defined here](https://github.com/inetum-orleans/docker-devbox-vagrant/blob/master/config.example.yaml#L11-L18) 
+(Could be defined in `.bashrc`, or inside `config.yaml` for [docker-devbox-vagrant](https://github.com/inetum-orleans/docker-devbox-vagrant) users)
 
 - Add environment variable `DOCKER_DEVBOX_REVERSE_PROXY_NETWORK=nginx-proxy`. 
-(Could be defined in `.bashrc`, or inside `config.yaml` for [docker-devbox-vagrant](https://github.com/gfi-centre-ouest/docker-devbox-vagrant) users)
+(Could be defined in `.bashrc`, or inside `config.yaml` for [docker-devbox-vagrant](https://github.com/inetum-orleans/docker-devbox-vagrant) users)
 
-- Install [docker-devbox](https://github.com/gfi-centre-ouest/docker-devbox) with `DOCKER_DEVBOX_USE_NGINX_PROXY` environment variable
+- Install [docker-devbox](https://github.com/inetum-orleans/docker-devbox) with `DOCKER_DEVBOX_USE_NGINX_PROXY` environment variable
 
 ```bash
-curl -L https://github.com/gfi-centre-ouest/docker-devbox/raw/master/installer | DOCKER_DEVBOX_USE_NGINX_PROXY=1 bash
+curl -L https://github.com/inetum-orleans/docker-devbox/raw/master/installer | DOCKER_DEVBOX_USE_NGINX_PROXY=1 bash
 ```
 
 - Create symlinks for older project to copy certificates at the right place
@@ -49,7 +49,7 @@ Migrate a project using docker-devbox-generator > 1.4
 -----------------------------------------------------
 
 This is guideline to migrate a project created from a manual template or with 
-[generator-docker-devbox](https://github.com/gfi-centre-ouest/generator-docker-devbox) < 1.4
+[generator-docker-devbox](https://github.com/inetum-orleans/generator-docker-devbox) < 1.4
 
 **You must at least perform the following operations.**
 
@@ -120,7 +120,7 @@ services:
 
 - Check for aliases defined in `.bash_enter`, or commands in `.bin` directory for `dc run` commands using a service 
 normally handled by traefik (like `apache` or `nginx` service). Add the following label to the run command, or simply 
-use docker-devbox [run](https://github.com/gfi-centre-ouest/docker-devbox-scripts/blob/master/.bin/run) command instead.
+use docker-devbox [run](https://github.com/inetum-orleans/docker-devbox-scripts/blob/master/.bin/run) command instead.
 (To avoid Bad Gateway issues on the main web container when those additional containers are running.)
 
 ```
@@ -131,11 +131,11 @@ At this point, the project should work like before with either traefik or nginx-
 
 **Operations that follows are now optional, but you should consider them to benefits of all features provided by docker-devbox.**
 
-- Run [generator-docker-devbox](https://github.com/gfi-centre-ouest/generator-docker-devbox) inside the project 
+- Run [generator-docker-devbox](https://github.com/inetum-orleans/generator-docker-devbox) inside the project 
 directory. You should choose features that match your existing environment.
 
 ```bash
-yo @gfi-centre-ouest/docker-devbox
+yo @inetum-orleans/docker-devbox
 ``` 
 
 - Override all conflicts, but keep `docker-compose.yml` and `docker-compose.override.dev.yml`.
@@ -156,7 +156,7 @@ you need to override or add a script.
 
 - If `.bash_enter` was defining aliases for commands like `php`, `composer`, `npm`, you should create equivalent 
 scripts into `.bin` directory. You may play with 
-[generator-docker-devbox](https://github.com/gfi-centre-ouest/generator-docker-devbox) by generating dummy projects to 
+[generator-docker-devbox](https://github.com/inetum-orleans/generator-docker-devbox) by generating dummy projects to 
 see how `.bin` script are written.
 
 Here's the `npm` command as an example, replace `{{instance.name}}` with the service name (i.e `node`). 

@@ -89,9 +89,9 @@ if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
 else
     echo "Install Docker Devbox" 2>&1 > "$_LOG"
     if [[ -z ${DOCKER_DEVBOX_MINIMAL} ]]; then
-      git clone --recurse-submodules -b $DOCKER_DEVBOX_BRANCH https://github.com/gfi-centre-ouest/docker-devbox "${DOCKER_DEVBOX_HOME}"
+      git clone --recurse-submodules -b $DOCKER_DEVBOX_BRANCH https://github.com/inetum-orleans/docker-devbox "${DOCKER_DEVBOX_HOME}"
     else
-      git clone https://github.com/gfi-centre-ouest/docker-devbox -b $DOCKER_DEVBOX_BRANCH "${DOCKER_DEVBOX_HOME}"
+      git clone https://github.com/inetum-orleans/docker-devbox -b $DOCKER_DEVBOX_BRANCH "${DOCKER_DEVBOX_HOME}"
       git -C "${DOCKER_DEVBOX_HOME}" submodule update --init scripts
     fi
 fi
@@ -127,7 +127,7 @@ fi
 export PATH="$DOCKER_DEVBOX_BIN:$PATH"
 
 echo "Downloading ddb latest release" 2>&1 |& tee -a "$_LOG"
-curl -s https://api.github.com/repos/gfi-centre-ouest/docker-devbox-ddb/releases/latest \
+curl -sL https://api.github.com/repos/inetum-orleans/docker-devbox-ddb/releases/latest \
 | grep "browser_download_url.*/ddb\"" \
 | cut -d : -f 2,3 \
 | tr -d \" \
@@ -193,7 +193,7 @@ if [[ -z "${DOCKER_DEVBOX_MINIMAL}" ]]; then
         echo "Install SmartCD" 2>&1 |& tee -a "$_LOG"
         cd /tmp &>> "$_LOG"
         rm -Rf smartcd &>> "$_LOG"
-        git clone https://github.com/gfi-centre-ouest/smartcd.git &>> "$_LOG"
+        git clone https://github.com/inetum-orleans/smartcd.git &>> "$_LOG"
         cd smartcd &>> "$_LOG"
         make install &>> "$_LOG"
         source load_smartcd &>> "$_LOG"

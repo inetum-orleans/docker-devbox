@@ -1,15 +1,15 @@
 [submodule "portainer"]
 	path = portainer
-	url = https://github.com/gfi-centre-ouest/docker-devbox-portainer
+	url = https://github.com/inetum-orleans/docker-devbox-portainer
 [submodule "traefik"]
 	path = traefik
-	url = https://github.com/gfi-centre-ouest/docker-devbox-traefik
+	url = https://github.com/inetum-orleans/docker-devbox-traefik
 [submodule "scripts"]
 	path = scripts
-	url = https://github.com/gfi-centre-ouest/docker-devbox-scripts
+	url = https://github.com/inetum-orleans/docker-devbox-scripts
 [submodule "cfssl"]
 	path = cfssl
-	url = https://github.com/gfi-centre-ouest/docker-devbox-cfssl.git
+	url = https://github.com/inetum-orleans/docker-devbox-cfssl.git
 [submodule "ddb"]
 	path = ddb
-	url = https://github.com/gfi-centre-ouest/docker-devbox-ddb.git
+	url = https://github.com/inetum-orleans/docker-devbox-ddb.git
