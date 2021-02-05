@@ -2,6 +2,7 @@
 
 DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-$HOME/.docker-devbox}"
 DOCKER_DEVBOX_BIN="${DOCKER_DEVBOX_HOME}/bin"
+DOCKER_DEVBOX_DOT_BIN="${DOCKER_DEVBOX_HOME}/.bin"
 
 if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
   _LOG="${DOCKER_DEVBOX_HOME}/docker-devbox-installer.log"
@@ -18,7 +19,7 @@ then
 fi
 
 if [[ $EUID -eq 0 ]]; then
-  SUDO_EXE=""
+  SUDO_EXE=""f68e88eb02f2b3e7e496a26cf1fddba946b818b0
 else
   SUDO_EXE=$(command -v sudo)
   if [[ ! -x "$SUDO_EXE" ]]; then
@@ -97,9 +98,10 @@ else
 fi
 
 mkdir -p $DOCKER_DEVBOX_BIN
+mkdir -p $DOCKER_DEVBOX_DOT_BIN
 
 if [[ -f "$HOME/.bashrc" ]]; then
-  cat "$HOME/.bashrc" | grep "export PATH=\"$DOCKER_DEVBOX_BIN:\$PATH\"" &> /dev/null
+  cat "$HOME/.bashrc" | grep "export PATH=\"$DOCKER_DEVBOX_BIN:$DOCKER_DEVBOX_DOT_BIN:\$PATH\"" &> /dev/null
   BASH_RC_CONFIGURED=$?
   if [[ "$BASH_RC_CONFIGURED" -ne 0 ]]; then
     echo "Add $DOCKER_DEVBOX_BIN to path (.bashrc)" 2>&1 |& tee -a "$_LOG"
