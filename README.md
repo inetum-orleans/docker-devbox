@@ -178,6 +178,7 @@ Environment variables available for installer script:
 local repository.
 - `DOCKER_DEVBOX_CI`: Equivalent to `DOCKER_DEVBOX_MINIMAL` and `DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES`, recommanded for CI.
 - `DOCKER_DEVBOX_BRANCH`: Use a custom docker-devbox branch.
+- `DOCKER_DEVBOX_LEGACY`: Install legacy bash docker-devbox scripts that were used before [ddb](https://github.com/inetum-orleans/docker-devbox-ddb).
 
 Environment variables can be set right before bash invocation in the installer one-liner.
 

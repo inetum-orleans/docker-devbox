@@ -37,11 +37,11 @@ if [[ ! -x $(command -v docker-compose) ]]; then
   exit 1
 fi
 
-if [[ ! -z "$(command -v apt-get)" ]]; then
+if [[ -n "$(command -v apt-get)" ]]; then
   PACKAGE_INSTALL_COMMAND="apt-get -y install"
-elif [[ ! -z "$(command -v yum)" ]]; then
+elif [[ -n "$(command -v yum)" ]]; then
   PACKAGE_INSTALL_COMMAND="yum -y install"
-elif [ ! -z "$(command -v apk)" ]; then
+elif [[ -n "$(command -v apk)" ]]; then
   PACKAGE_INSTALL_COMMAND="apk add"
 else
   PACKAGE_INSTALL_COMMAND=""
@@ -68,7 +68,7 @@ _install_package_if_missing() {
 _install_package_if_missing "git"
 _install_package_if_missing "make"
 
-if [[ ! -z "${DOCKER_DEVBOX_CI}" ]]; then
+if [[ -n "${DOCKER_DEVBOX_CI}" ]]; then
   DOCKER_DEVBOX_MINIMAL=1
   DOCKER_DEVBOX_DISABLE_UPDATE=1
   DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES=1
@@ -82,18 +82,20 @@ if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
     if [[ -z "${DOCKER_DEVBOX_DISABLE_UPDATE}" ]]; then
         echo "Update Docker Devbox" 2>&1 |& tee -a "$_LOG"
         git -C "${DOCKER_DEVBOX_HOME}" fetch --recurse-submodules &>> "$_LOG"
-        git -C "${DOCKER_DEVBOX_HOME}" reset --hard origin/$DOCKER_DEVBOX_BRANCH  &>> "$_LOG"
+        git -C "${DOCKER_DEVBOX_HOME}" reset --hard "origin/$DOCKER_DEVBOX_BRANCH"  &>> "$_LOG"
         git -C "${DOCKER_DEVBOX_HOME}" submodule foreach --recursive git reset --hard origin/master &>> "$_LOG"
     else
         echo "Docker Devbox update is disabled" 2>&1 |& tee -a "$_LOG"
     fi
 else
     echo "Install Docker Devbox" 2>&1 > "$_LOG"
-    if [[ -z ${DOCKER_DEVBOX_MINIMAL} ]]; then
-      git clone --recurse-submodules -b $DOCKER_DEVBOX_BRANCH https://github.com/inetum-orleans/docker-devbox "${DOCKER_DEVBOX_HOME}"
+    if [[ -z "${DOCKER_DEVBOX_MINIMAL}" ]]; then
+      git clone --recurse-submodules -b "$DOCKER_DEVBOX_BRANCH" https://github.com/inetum-orleans/docker-devbox "${DOCKER_DEVBOX_HOME}"
     else
-      git clone https://github.com/inetum-orleans/docker-devbox -b $DOCKER_DEVBOX_BRANCH "${DOCKER_DEVBOX_HOME}"
-      git -C "${DOCKER_DEVBOX_HOME}" submodule update --init scripts
+      git clone https://github.com/inetum-orleans/docker-devbox -b "$DOCKER_DEVBOX_BRANCH" "${DOCKER_DEVBOX_HOME}"
+      if [[ -n "${DOCKER_DEVBOX_LEGACY}" ]]; then
+        git -C "${DOCKER_DEVBOX_HOME}" submodule update --init scripts
+      fi
     fi
 fi
 
@@ -136,20 +138,22 @@ curl -fsL https://api.github.com/repos/inetum-orleans/docker-devbox-ddb/releases
 | wget -O "$DOCKER_DEVBOX_BIN/ddb" -qi -
 chmod +x $DOCKER_DEVBOX_BIN/ddb
 
-if [[ ! -x "$(command -v jq)" ]]; then
-  _install_package_if_missing "curl"
+if [[ -n "${DOCKER_DEVBOX_LEGACY}" ]]; then
+  if [[ ! -x "$(command -v jq)" ]]; then
+    _install_package_if_missing "curl"
 
-  echo "Install jq" 2>&1 |& tee "$_LOG"
-  curl -fsL -o "$DOCKER_DEVBOX_BIN"/jq "https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64" &>> "$_LOG"
-  chmod +x "$DOCKER_DEVBOX_BIN"/jq &>> "$_LOG"
-fi
+    echo "Install jq" 2>&1 |& tee "$_LOG"
+    curl -fsL -o "$DOCKER_DEVBOX_BIN"/jq "https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64" &>> "$_LOG"
+    chmod +x "$DOCKER_DEVBOX_BIN"/jq &>> "$_LOG"
+  fi
 
-if [[ ! -x "$(command -v yq)" ]]; then
-  _install_package_if_missing "curl"
+  if [[ ! -x "$(command -v yq)" ]]; then
+    _install_package_if_missing "curl"
 
-  echo "Install yq" 2>&1 |& tee "$_LOG"
-  curl -fsL -o "$DOCKER_DEVBOX_BIN"/yq "https://github.com/mikefarah/yq/releases/download/2.4.0/yq_linux_amd64" &>> "$_LOG"
-  chmod +x "$DOCKER_DEVBOX_BIN"/yq &>> "$_LOG"
+    echo "Install yq" 2>&1 |& tee "$_LOG"
+    curl -fsL -o "$DOCKER_DEVBOX_BIN"/yq "https://github.com/mikefarah/yq/releases/download/2.4.0/yq_linux_amd64" &>> "$_LOG"
+    chmod +x "$DOCKER_DEVBOX_BIN"/yq &>> "$_LOG"
+  fi
 fi
 
 if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
