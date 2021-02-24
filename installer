@@ -129,14 +129,15 @@ EOF
 fi
 
 export PATH="$DOCKER_DEVBOX_BIN:$PATH"
+DOCKER_DEVBOX_DDB_ASSET_NAME="${DOCKER_DEVBOX_DDB_ASSET_NAME:-ddb-linux}"
 
 echo "Downloading ddb latest release" 2>&1 |& tee -a "$_LOG"
 curl -fsL https://api.github.com/repos/inetum-orleans/docker-devbox-ddb/releases/latest \
-| grep "browser_download_url.*/ddb-linux\"" \
+| grep "browser_download_url.*/$DOCKER_DEVBOX_DDB_ASSET_NAME\"" \
 | cut -d : -f 2,3 \
 | tr -d \" \
 | wget -O "$DOCKER_DEVBOX_BIN/ddb" -qi -
-chmod +x $DOCKER_DEVBOX_BIN/ddb
+chmod +x "$DOCKER_DEVBOX_BIN/ddb"
 
 if [[ -n "${DOCKER_DEVBOX_LEGACY}" ]]; then
   if [[ ! -x "$(command -v jq)" ]]; then

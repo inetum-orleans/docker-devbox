@@ -179,6 +179,8 @@ local repository.
 - `DOCKER_DEVBOX_CI`: Equivalent to `DOCKER_DEVBOX_MINIMAL` and `DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES`, recommanded for CI.
 - `DOCKER_DEVBOX_BRANCH`: Use a custom docker-devbox branch.
 - `DOCKER_DEVBOX_LEGACY`: Install legacy bash docker-devbox scripts that were used before [ddb](https://github.com/inetum-orleans/docker-devbox-ddb).
+- `DOCKER_DEVBOX_DDB_ASSET_NAME`: Custom [ddb release](https://github.com/inetum-orleans/docker-devbox-ddb/releases) asset name to install ddb. Set to "ddb-linux-older-glibc" to install on 
+  older linux distributions, like Ubuntu 16.04. You should also add this value to `core.release_asset_name` in ddb configuration to make `self-update` command download this asset.
 
 Environment variables can be set right before bash invocation in the installer one-liner.
 
