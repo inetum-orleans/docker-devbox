@@ -73,7 +73,6 @@ On Windows, Acrylic DNS proxy can be used for this purpose.
 sudo apt-get install -y dnsmasq
 
 DOCKER_HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
-echo "DOCKER_HOST_IP=$DOCKER_HOST_IP" 
 sudo sh -c "echo address=/.test/$DOCKER_HOST_IP>/etc/dnsmasq.d/test-domain-to-docker-host-ip"
 
 sudo service dnsmasq restart
@@ -84,9 +83,18 @@ sudo service dnsmasq restart
 NetworkManager from desktop brings it's own dnsmasq daemon.
 
 ```
+sudo mv /etc/resolv.conf /etc/resolve.conf.bak
+sudo ln -s /var/run/NetworkManager/resolv.conf /etc/resolv.conf
+
+sudo sh -c 'cat << EOF > /etc/NetworkManager/conf.d/use-dnsmasq.conf
+[main]
+dns=dnsmasq
+EOF'
+
 DOCKER_HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
-echo "DOCKER_HOST_IP=$DOCKER_HOST_IP" 
-sudo sh -c "echo address=/.test/$DOCKER_HOST_IP>/etc/NetworkManager/dnsmasq.d/test-domain-to-docker-host-ip"
+sudo sh -c 'cat << EOF > /etc/NetworkManager/dnsmasq.d/test-domain-to-docker-host-ip
+address=/.test/$DOCKER_HOST_IP
+EOF'
 
 sudo service NetworkManager restart
 ```
