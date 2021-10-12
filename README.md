@@ -124,11 +124,8 @@ Run the following commands from docker devbox shell.
 # This dependency is required to support Chrome and Firefox.
 sudo apt-get install libnss3-tools
 
-# Get mkcert path in a variable
-MKCERT_EXE=$(command -v mkcert)
-
 # Uninstall any previous CA cert
-sudo -E $MKCERT_EXE -uninstall
+mkcert -uninstall
 
 # Move to cfssl container directory
 cd ~/.docker-devbox/cfssl
@@ -138,7 +135,7 @@ rm -Rf $(mkcert -CAROOT) && mkdir -p $(mkcert -CAROOT)
 docker cp $(docker-compose ps -q intermediate):/etc/cfssl/ca.pem $(mkcert -CAROOT)/rootCA.pem
 
 # Install CFSSL CA Certificate with mkcert.
-sudo -E $MKCERT_EXE -install 
+mkcert -install 
 ```
 
 #### Windows
