@@ -132,7 +132,7 @@ export PATH="$DOCKER_DEVBOX_BIN:$PATH"
 DOCKER_DEVBOX_DDB_ASSET_NAME="${DOCKER_DEVBOX_DDB_ASSET_NAME:-ddb-linux}"
 
 echo "Downloading ddb latest release" 2>&1 |& tee -a "$_LOG"
-DOCKER_DEVBOX_BIN_URL=$(curl -fsSL https://api.github.com/repos/inetum-orleans/docker-devbox-ddb/releases/latest \
+DOCKER_DEVBOX_BIN_URL=$(curl -fsSL $DOCKER_DEVBOX_CURL_OPTS_GITHUB_API https://api.github.com/repos/inetum-orleans/docker-devbox-ddb/releases/latest \
 | grep "browser_download_url.*/$DOCKER_DEVBOX_DDB_ASSET_NAME\"" \
 | cut -d : -f 2,3 \
 | tr -d \")
@@ -158,7 +158,7 @@ if [[ -n "${DOCKER_DEVBOX_LEGACY}" ]]; then
 fi
 
 if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
-    _CFSSL_CLI_VERSION=$(curl -fsL https://api.github.com/repos/Toilal/python-cfssl-cli/releases/latest | grep 'tag_name' | cut -d\" -f4)
+    _CFSSL_CLI_VERSION=$(curl -fsSL $DOCKER_DEVBOX_CURL_OPTS_GITHUB_API https://api.github.com/repos/Toilal/python-cfssl-cli/releases/latest | grep 'tag_name' | cut -d\" -f4)
     _CFSSL_CLI_INSTALL=1
     if [[ -x "$(command -v cfssl-cli)" ]]; then
       cfssl-cli --version | grep "cfssl-cli, version $_CFSSL_CLI_VERSION" &>> "$_LOG"
@@ -173,7 +173,7 @@ if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
       chmod +x "$DOCKER_DEVBOX_BIN"/cfssl-cli &>> "$_LOG"
     fi
 
-    _MKCERT_VERSION=$(curl -fsSL https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep 'tag_name' | cut -d\" -f4)
+    _MKCERT_VERSION=$(curl -fsSL $DOCKER_DEVBOX_CURL_OPTS_GITHUB_API https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep 'tag_name' | cut -d\" -f4)
     _MKCERT_INSTALL=1
     if [[ -f "$DOCKER_DEVBOX_BIN"/.mkcert.version ]]; then
         if [[ $(cat "$DOCKER_DEVBOX_BIN"/.mkcert.version) == "${_MKCERT_VERSION}" ]]; then
