@@ -132,11 +132,11 @@ export PATH="$DOCKER_DEVBOX_BIN:$PATH"
 DOCKER_DEVBOX_DDB_ASSET_NAME="${DOCKER_DEVBOX_DDB_ASSET_NAME:-ddb-linux}"
 
 echo "Downloading ddb latest release" 2>&1 |& tee -a "$_LOG"
-curl -fsL https://api.github.com/repos/inetum-orleans/docker-devbox-ddb/releases/latest \
+DOCKER_DEVBOX_BIN_URL=$(curl -fsSL https://api.github.com/repos/inetum-orleans/docker-devbox-ddb/releases/latest \
 | grep "browser_download_url.*/$DOCKER_DEVBOX_DDB_ASSET_NAME\"" \
 | cut -d : -f 2,3 \
-| tr -d \" \
-| wget -O "$DOCKER_DEVBOX_BIN/ddb" -qi -
+| tr -d \")
+curl -fsSL -o "$DOCKER_DEVBOX_BIN/ddb" $DOCKER_DEVBOX_BIN_URL
 chmod +x "$DOCKER_DEVBOX_BIN/ddb"
 
 if [[ -n "${DOCKER_DEVBOX_LEGACY}" ]]; then
@@ -144,7 +144,7 @@ if [[ -n "${DOCKER_DEVBOX_LEGACY}" ]]; then
     _install_package_if_missing "curl"
 
     echo "Install jq" 2>&1 |& tee "$_LOG"
-    curl -fsL -o "$DOCKER_DEVBOX_BIN"/jq "https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64" &>> "$_LOG"
+    curl -fsSL -o "$DOCKER_DEVBOX_BIN"/jq "https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64" &>> "$_LOG"
     chmod +x "$DOCKER_DEVBOX_BIN"/jq &>> "$_LOG"
   fi
 
@@ -152,7 +152,7 @@ if [[ -n "${DOCKER_DEVBOX_LEGACY}" ]]; then
     _install_package_if_missing "curl"
 
     echo "Install yq" 2>&1 |& tee "$_LOG"
-    curl -fsL -o "$DOCKER_DEVBOX_BIN"/yq "https://github.com/mikefarah/yq/releases/download/2.4.0/yq_linux_amd64" &>> "$_LOG"
+    curl -fsSL -o "$DOCKER_DEVBOX_BIN"/yq "https://github.com/mikefarah/yq/releases/download/2.4.0/yq_linux_amd64" &>> "$_LOG"
     chmod +x "$DOCKER_DEVBOX_BIN"/yq &>> "$_LOG"
   fi
 fi
@@ -169,11 +169,11 @@ if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
       _install_package_if_missing "curl"
 
       echo "Install cfssl-cli ($_CFSSL_CLI_VERSION)" 2>&1 |& tee "$_LOG"
-      curl -fsL -o "$DOCKER_DEVBOX_BIN"/cfssl-cli "https://github.com/Toilal/python-cfssl-cli/releases/download/$_CFSSL_CLI_VERSION/cfssl-cli" &>> "$_LOG"
+      curl -fsSL -o "$DOCKER_DEVBOX_BIN"/cfssl-cli "https://github.com/Toilal/python-cfssl-cli/releases/download/$_CFSSL_CLI_VERSION/cfssl-cli" &>> "$_LOG"
       chmod +x "$DOCKER_DEVBOX_BIN"/cfssl-cli &>> "$_LOG"
     fi
 
-    _MKCERT_VERSION=$(curl -fsL https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep 'tag_name' | cut -d\" -f4)
+    _MKCERT_VERSION=$(curl -fsSL https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep 'tag_name' | cut -d\" -f4)
     _MKCERT_INSTALL=1
     if [[ -f "$DOCKER_DEVBOX_BIN"/.mkcert.version ]]; then
         if [[ $(cat "$DOCKER_DEVBOX_BIN"/.mkcert.version) == "${_MKCERT_VERSION}" ]]; then
