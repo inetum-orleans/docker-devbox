@@ -91,9 +91,8 @@ sudo sh -c 'cat << EOF > /etc/NetworkManager/conf.d/use-dnsmasq.conf
 dns=dnsmasq
 EOF'
 
-DOCKER_HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
 sudo sh -c 'cat << EOF > /etc/NetworkManager/dnsmasq.d/test-domain-to-docker-host-ip
-address=/.test/$DOCKER_HOST_IP
+address=/.test/$(ip -4 addr show docker0 | grep -Po "inet \K[\d.]+")
 EOF'
 
 sudo service NetworkManager restart
