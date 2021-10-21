@@ -186,6 +186,7 @@ local repository.
 - `DOCKER_DEVBOX_DDB_ASSET_NAME`: Custom [ddb release](https://github.com/inetum-orleans/docker-devbox-ddb/releases) asset name to install ddb. Set to "ddb-linux-older-glibc" to install on 
   older linux distributions, like Ubuntu 16.04. You should also add this value to `core.release_asset_name` in ddb configuration to make `self-update` command download this asset.
 - `DOCKER_DEVBOX_CURL_OPTS_GITHUB_API`: Additional curl options to pass when accessing github api. You can set this variable to `-u <username:token>` using a Github Personnal Access Token if you encounter 403 errors due to rate limiting.
+- `DOCKER_DEVBOX_SKIP_DOCKER_CHECKS`: Force installation even if `docker` or `docker-compose` binaries are unavailable.
 
 Environment variables can be set right before bash invocation in the installer one-liner.
 

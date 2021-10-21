@@ -27,12 +27,12 @@ else
   fi
 fi
 
-if [[ ! -x $(command -v docker) ]]; then
+if [[ -z "${DOCKER_DEVBOX_SKIP_DOCKER_CHECKS}" ]] && [[ ! -x $(command -v docker) ]]; then
   echo "Please install docker and docker-compose before installing docker devbox."
   exit 1
 fi
 
-if [[ ! -x $(command -v docker-compose) ]]; then
+if [[ -z "${DOCKER_DEVBOX_SKIP_DOCKER_CHECKS}" ]] && [[ ! -x $(command -v docker-compose) ]]; then
   echo "Please install docker-compose before installing docker devbox."
   exit 1
 fi
