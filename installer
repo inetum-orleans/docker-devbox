@@ -19,7 +19,7 @@ then
 fi
 
 if [[ $EUID -eq 0 ]]; then
-  SUDO_EXE=""f68e88eb02f2b3e7e496a26cf1fddba946b818b0
+  SUDO_EXE=""
 else
   SUDO_EXE=$(command -v sudo)
   if [[ ! -x "$SUDO_EXE" ]]; then
