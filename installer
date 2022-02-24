@@ -27,6 +27,29 @@ else
   fi
 fi
 
+if [[ ! -x $(command -v docker) ]]; then
+  echo "docker is not available. This will install it using get.docker.com script."
+  curl -fsSL https://get.docker.com/ | sh
+  usermod -aG docker $USER
+fi
+
+if [[ ! -x $(command -v docker-compose) ]]; then
+  echo "docker-compose is not available. It will be installed."
+
+  DOCKER_COMPOSE_VERSION="1.29.2"
+  curl -fsSL -o ./docker-compose https://github.com/docker/compose/releases/download/$DOCKER_COMPOSE_VERSION/docker-compose-`uname -s`-`uname -m`
+
+  if [[ ! -x "$SUDO_EXE" && $EUID -ne 0 ]]; then
+    echo "Sudo is not available to install docker-compose. Install 'docker-compose' manually and run the installer again."
+    exit 1
+  fi
+
+  $SUDO_EXE mv ./docker-compose /usr/local/bin/docker-compose
+  $SUDO_EXE chmod +x /usr/local/bin/docker-compose
+
+  curl -fsSL https://raw.githubusercontent.com/docker/compose/${DOCKER_COMPOSE_VERSION}/contrib/completion/bash/docker-compose | $SUDO_EXE tee /etc/bash_completion.d/docker-compose
+fi
+
 if [[ -z "${DOCKER_DEVBOX_SKIP_DOCKER_CHECKS}" ]] && [[ ! -x $(command -v docker) ]]; then
   echo "Please install docker and docker-compose before installing docker devbox."
   exit 1
@@ -75,9 +98,9 @@ if [[ -n "${DOCKER_DEVBOX_CI}" ]]; then
 fi
 
 export DOCKER_DEVBOX_REVERSE_PROXY_NETWORK="${DOCKER_DEVBOX_REVERSE_PROXY_NETWORK:-reverse-proxy}"
-
 DOCKER_DEVBOX_BRANCH="${DOCKER_DEVBOX_BRANCH-master}"
 
+$SUDO_EXE su -l $USER<<EOSU
 if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
     if [[ -z "${DOCKER_DEVBOX_DISABLE_UPDATE}" ]]; then
         echo "Update Docker Devbox" 2>&1 |& tee -a "$_LOG"
@@ -303,3 +326,4 @@ fi
 if [[ -f $HOME/.smartcd_config ]]; then
   source $HOME/.smartcd_config
 fi
+EOSU
