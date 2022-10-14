@@ -28,12 +28,7 @@ else
 fi
 
 if [[ -z "${DOCKER_DEVBOX_SKIP_DOCKER_CHECKS}" ]] && [[ ! -x $(command -v docker) ]]; then
-  echo "Please install docker and docker-compose before installing docker devbox."
-  exit 1
-fi
-
-if [[ -z "${DOCKER_DEVBOX_SKIP_DOCKER_CHECKS}" ]] && [[ ! -x $(command -v docker-compose) ]]; then
-  echo "Please install docker-compose before installing docker devbox."
+  echo "Please install docker before installing docker devbox."
   exit 1
 fi
 
@@ -255,13 +250,13 @@ EOF
         echo "Use traefik as reverse proxy"
         cd "${DOCKER_DEVBOX_HOME}"/traefik &>> "$_LOG"
         echo "Stop traefik" 2>&1 |& tee -a "$_LOG"
-        docker-compose down --remove-orphans &>> "$_LOG"
+        docker compose down --remove-orphans &>> "$_LOG"
         echo "Install traefik" 2>&1 |& tee -a "$_LOG"
         touch acme.json
         ddb configure &>> "$_LOG" || true
-        docker-compose pull &>> "$_LOG" || true
+        docker compose pull &>> "$_LOG" || true
         echo "Start traefik" 2>&1 |& tee -a "$_LOG"
-        docker-compose up --build -d &>> "$_LOG"
+        docker compose up --build -d &>> "$_LOG"
         cd $HOME &>> "$_LOG"
     else
         echo "Reverse proxy is disabled" 2>&1 |& tee -a "$_LOG"
@@ -269,13 +264,13 @@ EOF
 
     cd "${DOCKER_DEVBOX_HOME}"/cfssl &>> "$_LOG"
     echo "Stop CFSSL" 2>&1 |& tee -a "$_LOG"
-    docker-compose down --remove-orphans &>> "$_LOG"
+    docker compose down --remove-orphans &>> "$_LOG"
     if [[ -z "${DOCKER_DEVBOX_DISABLE_CFSSL}" ]]; then
        echo "Install CFSSL" 2>&1 |& tee -a "$_LOG"
        ddb configure &>> "$_LOG" || true
-       docker-compose pull &>> "$_LOG" || true
+       docker compose pull &>> "$_LOG" || true
        echo "Start CFSSL" 2>&1 |& tee -a "$_LOG"
-       docker-compose up --build -d &>> "$_LOG"
+       docker compose up --build -d &>> "$_LOG"
     else
         echo "CFSSL is disabled" 2>&1 |& tee -a "$_LOG"
     fi
@@ -283,13 +278,13 @@ EOF
 
     cd "${DOCKER_DEVBOX_HOME}"/portainer &>> "$_LOG"
     echo "Stop portainer" 2>&1 |& tee -a "$_LOG"
-    docker-compose down --remove-orphans &>> "$_LOG"
+    docker compose down --remove-orphans &>> "$_LOG"
     if [[ -z "${DOCKER_DEVBOX_DISABLE_PORTAINER}" ]]; then
          echo "Install portainer" 2>&1 |& tee -a "$_LOG"
          ddb configure &>> "$_LOG" || true
-         docker-compose pull &>> "$_LOG" || true
+         docker compose pull &>> "$_LOG" || true
          echo "Start portainer" 2>&1 |& tee -a "$_LOG"
-         docker-compose up --build -d &>> "$_LOG"
+         docker compose up --build -d &>> "$_LOG"
     else
         echo "Portainer is disabled" 2>&1 |& tee -a "$_LOG"
     fi

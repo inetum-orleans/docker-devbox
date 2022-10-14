@@ -9,9 +9,9 @@ fi
 DOCKER_DEVBOX_HOME=$(cd -P -- "$(dirname -- "$0")" && pwd -P)
 echo $DOCKER_DEVBOX_HOME
 
-cd "${DOCKER_DEVBOX_HOME}"/cfssl && docker-compose down -v --remove-orphans && cd "${DOCKER_DEVBOX_HOME}"
-cd "${DOCKER_DEVBOX_HOME}"/portainer && docker-compose down -v --remove-orphans && docker-compose up -d && cd "${DOCKER_DEVBOX_HOME}"
-cd "${DOCKER_DEVBOX_HOME}"/traefik && docker-compose down -v --remove-orphans && docker-compose up -d && cd "${DOCKER_DEVBOX_HOME}"
+cd "${DOCKER_DEVBOX_HOME}"/cfssl && docker compose down -v --remove-orphans && cd "${DOCKER_DEVBOX_HOME}"
+cd "${DOCKER_DEVBOX_HOME}"/portainer && docker compose down -v --remove-orphans && docker compose up -d && cd "${DOCKER_DEVBOX_HOME}"
+cd "${DOCKER_DEVBOX_HOME}"/traefik && docker compose down -v --remove-orphans && docker compose up -d && cd "${DOCKER_DEVBOX_HOME}"
 
 rm -Rf "$HOME/.smartcd"
 rm -Rf "$HOME/.smartcd_config"

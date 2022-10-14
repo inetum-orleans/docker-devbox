@@ -37,7 +37,7 @@ Docker Devbox runs natively on any Linux only, but Windows and MacOS users may u
 VirtualBox VM based on Ubuntu Server.
 
 * Docker >= 18.09.6
-* docker-compose >= 1.24.0
+* Docker compose plugin >= 2
 * GNU Bash >= 4.0
 * curl
 
