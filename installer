@@ -140,7 +140,7 @@ if [[ -z "${DOCKER_DEVBOX_BIN_URL}" ]]; then
       | tail --lines=1 \
       | cut --delimiter='/' --fields=3)
 
-  if [[ -z "${DOCKER_DEVBOX_BIN_URL}" ]]; then
+  if [[ -z "${DOCKER_DEVBOX_LATEST_RELEASE}" ]]; then
       echo "Can't find docker-devbox-ddb last release." 2>&1 | tee -a "$_LOG"
       exit 1
   fi
