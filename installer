@@ -83,7 +83,7 @@ if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
         echo "Docker Devbox update is disabled" 2>&1 |& tee -a "$_LOG"
     fi
 else
-    echo "Install Docker Devbox" 2>&1 > "$_LOG"
+    echo "Install Docker Devbox" 2>&1 >> "$_LOG"
     if [[ -z "${DOCKER_DEVBOX_MINIMAL}" ]]; then
       git clone --recurse-submodules -b "$DOCKER_DEVBOX_BRANCH" https://github.com/inetum-orleans/docker-devbox "${DOCKER_DEVBOX_HOME}"
     else
@@ -205,7 +205,7 @@ if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
       curl -fsSL -o "$DOCKER_DEVBOX_BIN"/mkcert "https://github.com/FiloSottile/mkcert/releases/download/$_MKCERT_VERSION/mkcert-$_MKCERT_VERSION-linux-amd64" &>> "$_LOG"
       chmod +x "$DOCKER_DEVBOX_BIN"/mkcert &>> "$_LOG"
 
-      echo "$_MKCERT_VERSION" > "$DOCKER_DEVBOX_BIN"/.mkcert.version
+      echo "$_MKCERT_VERSION" >> "$DOCKER_DEVBOX_BIN"/.mkcert.version
     fi
 fi
 
