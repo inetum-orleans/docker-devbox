@@ -155,7 +155,7 @@ if [[ -n "${DOCKER_DEVBOX_LEGACY}" ]]; then
   if [[ ! -x "$(command -v jq)" ]]; then
     _install_package_if_missing "curl"
 
-    echo "Install jq" 2>&1 |& tee "$_LOG"
+    echo "Install jq" 2>&1 |& tee -a "$_LOG"
     curl -fsSL -o "$DOCKER_DEVBOX_BIN"/jq "https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64" &>> "$_LOG"
     chmod +x "$DOCKER_DEVBOX_BIN"/jq &>> "$_LOG"
   fi
@@ -163,7 +163,7 @@ if [[ -n "${DOCKER_DEVBOX_LEGACY}" ]]; then
   if [[ ! -x "$(command -v yq)" ]]; then
     _install_package_if_missing "curl"
 
-    echo "Install yq" 2>&1 |& tee "$_LOG"
+    echo "Install yq" 2>&1 |& tee -a "$_LOG"
     curl -fsSL -o "$DOCKER_DEVBOX_BIN"/yq "https://github.com/mikefarah/yq/releases/download/2.4.0/yq_linux_amd64" &>> "$_LOG"
     chmod +x "$DOCKER_DEVBOX_BIN"/yq &>> "$_LOG"
   fi
@@ -196,7 +196,7 @@ if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
     if [[ "$_MKCERT_INSTALL" -ne 0 ]]; then
       _install_package_if_missing "curl"
 
-      echo "Install mkcert ($_MKCERT_VERSION)" 2>&1 |& tee "$_LOG"
+      echo "Install mkcert ($_MKCERT_VERSION)" 2>&1 |& tee -a "$_LOG"
       curl -fsSL -o "$DOCKER_DEVBOX_BIN"/mkcert "https://github.com/FiloSottile/mkcert/releases/download/$_MKCERT_VERSION/mkcert-$_MKCERT_VERSION-linux-amd64" &>> "$_LOG"
       chmod +x "$DOCKER_DEVBOX_BIN"/mkcert &>> "$_LOG"
 
