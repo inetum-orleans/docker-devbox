@@ -126,26 +126,31 @@ fi
 export PATH="$DOCKER_DEVBOX_BIN:$PATH"
 DOCKER_DEVBOX_DDB_ASSET_NAME="${DOCKER_DEVBOX_DDB_ASSET_NAME:-ddb-linux}"
 
-echo "Downloading ddb latest release" 2>&1 |& tee -a "$_LOG"
-DOCKER_DEVBOX_BIN_URL=$(curl -fsSL $DOCKER_DEVBOX_CURL_OPTS_GITHUB_API https://api.github.com/repos/inetum-orleans/docker-devbox-ddb/releases/latest \
-| grep "browser_download_url.*/$DOCKER_DEVBOX_DDB_ASSET_NAME\"" \
-| cut -d : -f 2,3 \
-| tr -d \")
+if [[ -n "${DOCKER_DEVBOX_DDB_VERSION}" ]]; then
+  echo "Downloading ddb version ${DOCKER_DEVBOX_DDB_VERSION}" 2>&1 |& tee -a "$_LOG"
+  DOCKER_DEVBOX_BIN_URL="https://github.com/inetum-orleans/docker-devbox-ddb/releases/download/${DOCKER_DEVBOX_DDB_VERSION}/${DOCKER_DEVBOX_DDB_ASSET_NAME}"
+else
+  echo "Downloading ddb latest release" 2>&1 |& tee -a "$_LOG"
+  DOCKER_DEVBOX_BIN_URL=$(curl -fsSL $DOCKER_DEVBOX_CURL_OPTS_GITHUB_API https://api.github.com/repos/inetum-orleans/docker-devbox-ddb/releases/latest \
+  | grep "browser_download_url.*/$DOCKER_DEVBOX_DDB_ASSET_NAME\"" \
+  | cut -d : -f 2,3 \
+  | tr -d \")
 
-if [[ -z "${DOCKER_DEVBOX_BIN_URL}" ]]; then
-  # Github API may fail, most commonly because of unauthenticated rate limit.
-  # Use git to retrieve latest release tag and build url manually.
-  DOCKER_DEVBOX_LATEST_RELEASE=$(git -c 'versionsort.suffix=-' \
-      ls-remote --exit-code --refs --sort='version:refname' --tags https://github.com/inetum-orleans/docker-devbox-ddb 'v*.*.*' \
-      | tail --lines=1 \
-      | cut --delimiter='/' --fields=3)
+  if [[ -z "${DOCKER_DEVBOX_BIN_URL}" ]]; then
+    # Github API may fail, most commonly because of unauthenticated rate limit.
+    # Use git to retrieve latest release tag and build url manually.
+    DOCKER_DEVBOX_LATEST_RELEASE=$(git -c 'versionsort.suffix=-' \
+        ls-remote --exit-code --refs --sort='version:refname' --tags https://github.com/inetum-orleans/docker-devbox-ddb 'v*.*.*' \
+        | tail --lines=1 \
+        | cut --delimiter='/' --fields=3)
 
-  if [[ -z "${DOCKER_DEVBOX_LATEST_RELEASE}" ]]; then
-      echo "Can't find docker-devbox-ddb last release." 2>&1 | tee -a "$_LOG"
-      exit 1
+    if [[ -z "${DOCKER_DEVBOX_LATEST_RELEASE}" ]]; then
+        echo "Can't find docker-devbox-ddb last release." 2>&1 | tee -a "$_LOG"
+        exit 1
+    fi
+
+    DOCKER_DEVBOX_BIN_URL="https://github.com/inetum-orleans/docker-devbox-ddb/releases/download/${DOCKER_DEVBOX_LATEST_RELEASE}/${DOCKER_DEVBOX_DDB_ASSET_NAME}"
   fi
-
-  DOCKER_DEVBOX_BIN_URL="https://github.com/inetum-orleans/docker-devbox-ddb/releases/download/${DOCKER_DEVBOX_LATEST_RELEASE}/${DOCKER_DEVBOX_DDB_ASSET_NAME}"
 fi
 
 curl -fsSL -o "$DOCKER_DEVBOX_BIN/ddb" $DOCKER_DEVBOX_BIN_URL
@@ -180,7 +185,7 @@ if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
     if [[ "$_CFSSL_CLI_INSTALL" -ne 0 ]]; then
       _install_package_if_missing "curl"
 
-      echo "Install cfssl-cli ($_CFSSL_CLI_VERSION)" 2>&1 |& tee "$_LOG"
+      echo "Install cfssl-cli ($_CFSSL_CLI_VERSION)" 2>&1 |& tee -a "$_LOG"
       curl -fsSL -o "$DOCKER_DEVBOX_BIN"/cfssl-cli "https://github.com/Toilal/python-cfssl-cli/releases/download/$_CFSSL_CLI_VERSION/cfssl-cli" &>> "$_LOG"
       chmod +x "$DOCKER_DEVBOX_BIN"/cfssl-cli &>> "$_LOG"
     fi

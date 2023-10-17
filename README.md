@@ -189,6 +189,7 @@ mkcert -install
 Environment variables available for installer script:
 
 - `DOCKER_DEVBOX_MINIMAL`: Clone docker-devbox repository and create reverse-proxy network only.
+- `DOCKER_DEVBOX_DDB_VERSION`: Install a specific version of ddb (ex: `v2.0.1`). When unset, gets the latest version
 - `DOCKER_DEVBOX_DISABLE_SMARTCD`: Disable SmartCD.
 - `DOCKER_DEVBOX_DISABLE_CFSSL`: Disable CFSSL.
 - `DOCKER_DEVBOX_DISABLE_PORTAINER`: Disable portainer.
