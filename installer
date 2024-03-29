@@ -154,21 +154,6 @@ curl -fsSL -o "$DOCKER_DEVBOX_BIN/ddb" $DOCKER_DEVBOX_BIN_URL
 chmod +x "$DOCKER_DEVBOX_BIN/ddb"
 
 if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
-    _CFSSL_CLI_VERSION=$(curl -fsSL $DOCKER_DEVBOX_CURL_OPTS_GITHUB_API https://api.github.com/repos/Toilal/python-cfssl-cli/releases/latest | grep 'tag_name' | cut -d\" -f4)
-    _CFSSL_CLI_INSTALL=1
-    if [[ -x "$(command -v cfssl-cli)" ]]; then
-      cfssl-cli --version | grep "cfssl-cli, version $_CFSSL_CLI_VERSION" &>> "$_LOG"
-      _CFSSL_CLI_INSTALL=$?
-    fi
-
-    if [[ "$_CFSSL_CLI_INSTALL" -ne 0 ]]; then
-      _install_package_if_missing "curl"
-
-      echo "Install cfssl-cli ($_CFSSL_CLI_VERSION)" 2>&1 |& tee -a "$_LOG"
-      curl -fsSL -o "$DOCKER_DEVBOX_BIN"/cfssl-cli "https://github.com/Toilal/python-cfssl-cli/releases/download/$_CFSSL_CLI_VERSION/cfssl-cli" &>> "$_LOG"
-      chmod +x "$DOCKER_DEVBOX_BIN"/cfssl-cli &>> "$_LOG"
-    fi
-
     _MKCERT_VERSION=$(curl -fsSL $DOCKER_DEVBOX_CURL_OPTS_GITHUB_API https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep 'tag_name' | cut -d\" -f4)
     _MKCERT_INSTALL=1
     if [[ -f "$DOCKER_DEVBOX_BIN"/.mkcert.version ]]; then
