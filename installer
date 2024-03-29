@@ -88,9 +88,6 @@ else
       git clone --recurse-submodules -b "$DOCKER_DEVBOX_BRANCH" https://github.com/inetum-orleans/docker-devbox "${DOCKER_DEVBOX_HOME}"
     else
       git clone https://github.com/inetum-orleans/docker-devbox -b "$DOCKER_DEVBOX_BRANCH" "${DOCKER_DEVBOX_HOME}"
-      if [[ -n "${DOCKER_DEVBOX_LEGACY}" ]]; then
-        git -C "${DOCKER_DEVBOX_HOME}" submodule update --init scripts
-      fi
     fi
 fi
 
@@ -155,24 +152,6 @@ fi
 
 curl -fsSL -o "$DOCKER_DEVBOX_BIN/ddb" $DOCKER_DEVBOX_BIN_URL
 chmod +x "$DOCKER_DEVBOX_BIN/ddb"
-
-if [[ -n "${DOCKER_DEVBOX_LEGACY}" ]]; then
-  if [[ ! -x "$(command -v jq)" ]]; then
-    _install_package_if_missing "curl"
-
-    echo "Install jq" 2>&1 |& tee -a "$_LOG"
-    curl -fsSL -o "$DOCKER_DEVBOX_BIN"/jq "https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64" &>> "$_LOG"
-    chmod +x "$DOCKER_DEVBOX_BIN"/jq &>> "$_LOG"
-  fi
-
-  if [[ ! -x "$(command -v yq)" ]]; then
-    _install_package_if_missing "curl"
-
-    echo "Install yq" 2>&1 |& tee -a "$_LOG"
-    curl -fsSL -o "$DOCKER_DEVBOX_BIN"/yq "https://github.com/mikefarah/yq/releases/download/2.4.0/yq_linux_amd64" &>> "$_LOG"
-    chmod +x "$DOCKER_DEVBOX_BIN"/yq &>> "$_LOG"
-  fi
-fi
 
 if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
     _CFSSL_CLI_VERSION=$(curl -fsSL $DOCKER_DEVBOX_CURL_OPTS_GITHUB_API https://api.github.com/repos/Toilal/python-cfssl-cli/releases/latest | grep 'tag_name' | cut -d\" -f4)

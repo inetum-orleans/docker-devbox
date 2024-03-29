@@ -4,9 +4,6 @@
 [submodule "traefik"]
 	path = traefik
 	url = https://github.com/inetum-orleans/docker-devbox-traefik
-[submodule "scripts"]
-	path = scripts
-	url = https://github.com/inetum-orleans/docker-devbox-scripts
 [submodule "cfssl"]
 	path = cfssl
 	url = https://github.com/inetum-orleans/docker-devbox-cfssl.git
