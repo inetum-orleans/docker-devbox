@@ -65,6 +65,7 @@ _install_package_if_missing "make"
 
 if [[ -n "${DOCKER_DEVBOX_CI}" ]]; then
   DOCKER_DEVBOX_MINIMAL=1
+  DOCKER_DEVBOX_DISABLE_CLONE=1
   DOCKER_DEVBOX_DISABLE_UPDATE=1
   DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES=1
 fi
@@ -73,22 +74,24 @@ export DOCKER_DEVBOX_REVERSE_PROXY_NETWORK="${DOCKER_DEVBOX_REVERSE_PROXY_NETWOR
 
 DOCKER_DEVBOX_BRANCH="${DOCKER_DEVBOX_BRANCH-master}"
 
-if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
-    if [[ -z "${DOCKER_DEVBOX_DISABLE_UPDATE}" ]]; then
-        echo "Update Docker Devbox" 2>&1 |& tee -a "$_LOG"
-        git -C "${DOCKER_DEVBOX_HOME}" fetch --recurse-submodules &>> "$_LOG"
-        git -C "${DOCKER_DEVBOX_HOME}" reset --hard "origin/$DOCKER_DEVBOX_BRANCH"  &>> "$_LOG"
-        git -C "${DOCKER_DEVBOX_HOME}" submodule foreach --recursive git reset --hard origin/master &>> "$_LOG"
-    else
-        echo "Docker Devbox update is disabled" 2>&1 |& tee -a "$_LOG"
-    fi
-else
-    echo "Install Docker Devbox" 2>&1 >> "$_LOG"
-    if [[ -z "${DOCKER_DEVBOX_MINIMAL}" ]]; then
-      git clone --recurse-submodules -b "$DOCKER_DEVBOX_BRANCH" https://github.com/inetum-orleans/docker-devbox "${DOCKER_DEVBOX_HOME}"
-    else
-      git clone https://github.com/inetum-orleans/docker-devbox -b "$DOCKER_DEVBOX_BRANCH" "${DOCKER_DEVBOX_HOME}"
-    fi
+if [[ -z "${DOCKER_DEVBOX_DISABLE_CLONE}" ]]; then
+  if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
+      if [[ -z "${DOCKER_DEVBOX_DISABLE_UPDATE}" ]]; then
+          echo "Update Docker Devbox" 2>&1 |& tee -a "$_LOG"
+          git -C "${DOCKER_DEVBOX_HOME}" fetch --recurse-submodules &>> "$_LOG"
+          git -C "${DOCKER_DEVBOX_HOME}" reset --hard "origin/$DOCKER_DEVBOX_BRANCH"  &>> "$_LOG"
+          git -C "${DOCKER_DEVBOX_HOME}" submodule foreach --recursive git reset --hard origin/master &>> "$_LOG"
+      else
+          echo "Docker Devbox update is disabled" 2>&1 |& tee -a "$_LOG"
+      fi
+  else
+      echo "Install Docker Devbox" 2>&1 >> "$_LOG"
+      if [[ -z "${DOCKER_DEVBOX_MINIMAL}" ]]; then
+        git clone --recurse-submodules -b "$DOCKER_DEVBOX_BRANCH" https://github.com/inetum-orleans/docker-devbox "${DOCKER_DEVBOX_HOME}"
+      else
+        git clone https://github.com/inetum-orleans/docker-devbox -b "$DOCKER_DEVBOX_BRANCH" "${DOCKER_DEVBOX_HOME}"
+      fi
+  fi
 fi
 
 mkdir -p $DOCKER_DEVBOX_BIN
