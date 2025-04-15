@@ -247,6 +247,3 @@ To remove global commands from a project, run the following command from the pro
 docker-devbox bin local
 ```
 
-# Migration
-
-Please read [MIGRATION.md](./MIGRATION.md) to migration machine and projects from previous version.
