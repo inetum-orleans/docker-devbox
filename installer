@@ -98,24 +98,24 @@ if [[ -f "$HOME/.bashrc" ]]; then
   cat "$HOME/.bashrc" | grep "export PATH=\"$DOCKER_DEVBOX_BIN:$DOCKER_DEVBOX_DOT_BIN:\$PATH\"" &> /dev/null
   BASH_RC_CONFIGURED=$?
   if [[ "$BASH_RC_CONFIGURED" -ne 0 ]]; then
-    echo "Add $DOCKER_DEVBOX_BIN to path (.bashrc)" 2>&1 |& tee -a "$_LOG"
+    echo "Add $DOCKER_DEVBOX_BIN and $DOCKER_DEVBOX_DOT_BIN to path (.bashrc)" 2>&1 |& tee -a "$_LOG"
 
     cat << EOF >> "$HOME/.bashrc"
 
 # Add docker-devbox bin to PATH
-export PATH="$DOCKER_DEVBOX_BIN:\$PATH"
+export PATH="$DOCKER_DEVBOX_BIN:$DOCKER_DEVBOX_DOT_BIN:\$PATH"
 EOF
   fi
 elif [[ -f "$HOME/.bash_profile" ]]; then
-  cat "$HOME/.bash_profile" | grep "export PATH=\"$DOCKER_DEVBOX_BIN:\$PATH\"" &> /dev/null
+  cat "$HOME/.bash_profile" | grep "export PATH=\"$DOCKER_DEVBOX_BIN:$DOCKER_DEVBOX_DOT_BIN:\$PATH\"" &> /dev/null
   BASH_PROFILE_CONFIGURED=$?
   if [[ "$BASH_PROFILE_CONFIGURED" -ne 0 ]]; then
-    echo "Add $DOCKER_DEVBOX_BIN to path (.bash_profile)" 2>&1 |& tee -a "$_LOG"
+    echo "Add $DOCKER_DEVBOX_BIN and $DOCKER_DEVBOX_DOT_BIN to path (.bash_profile)" 2>&1 |& tee -a "$_LOG"
 
     cat << EOF >> "$HOME/.bash_profile"
 
 # Add docker-devbox bin to PATH
-export PATH="$DOCKER_DEVBOX_BIN:\$PATH"
+export PATH="$DOCKER_DEVBOX_BIN:$DOCKER_DEVBOX_DOT_BIN:\$PATH"
 EOF
   fi
 fi
