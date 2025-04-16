@@ -4,13 +4,40 @@ DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-$HOME/.docker-devbox}"
 DOCKER_DEVBOX_BIN="${DOCKER_DEVBOX_HOME}/bin"
 DOCKER_DEVBOX_DOT_BIN="${DOCKER_DEVBOX_HOME}/.bin"
 
-if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
-  _LOG="${DOCKER_DEVBOX_HOME}/docker-devbox-installer.log"
-else
-  _LOG="${PWD}/docker-devbox-installer.log"
+if [[ -n "${DOCKER_DEVBOX_CI}" ]]; then
+  DOCKER_DEVBOX_MINIMAL=1
+  DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES=1
 fi
 
+if [[ -z "${DOCKER_DEVBOX_MINIMAL}" ]]; then
+  DOCKER_DEVBOX_SMARTCD_BRANCH="${DOCKER_DEVBOX_SMARTCD_BRANCH:-master}"
+  DOCKER_DEVBOX_CFSSL_BRANCH="${DOCKER_DEVBOX_CFSSL_BRANCH:-master}"
+  DOCKER_DEVBOX_PORTAINER_BRANCH="${DOCKER_DEVBOX_PORTAINER_BRANCH:-master}"
+  DOCKER_DEVBOX_TRAEFIK_BRANCH="${DOCKER_DEVBOX_TRAEFIK_BRANCH:-master}"
+fi
+
+if [[ -n "${DOCKER_DEVBOX_DISABLE_CFSSL}" ]]; then
+  DOCKER_DEVBOX_CFSSL_BRANCH=""
+fi
+
+if [[ -n "${DOCKER_DEVBOX_DISABLE_PORTAINER}" ]]; then
+  DOCKER_DEVBOX_PORTAINER_BRANCH=""
+fi
+
+if [[ -n "${DOCKER_DEVBOX_DISABLE_REVERSE_PROXY}" ]]; then
+  DOCKER_DEVBOX_TRAEFIK_BRANCH=""
+fi
+
+mkdir -p "${DOCKER_DEVBOX_HOME}"
+
+_LOG="${DOCKER_DEVBOX_HOME}/docker-devbox-installer.log"
+
 echo "">"$_LOG"
+
+if [[ -d "$DOCKER_DEVBOX_HOME/cache" ]]; then
+  echo "Clearing cache from previous installation" 2>&1 |& tee -a "$_LOG"
+  rm -rf "$DOCKER_DEVBOX_HOME/cache" &>> "$_LOG"
+fi
 
 if [[ $EUID -eq 0 ]] && [[ -z "${DOCKER_DEVBOX_ALLOW_ROOT}" ]]
 then
@@ -63,33 +90,7 @@ _install_package_if_missing() {
 _install_package_if_missing "git"
 _install_package_if_missing "make"
 
-if [[ -n "${DOCKER_DEVBOX_CI}" ]]; then
-  DOCKER_DEVBOX_MINIMAL=1
-  DOCKER_DEVBOX_DISABLE_UPDATE=1
-  DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES=1
-fi
-
 export DOCKER_DEVBOX_REVERSE_PROXY_NETWORK="${DOCKER_DEVBOX_REVERSE_PROXY_NETWORK:-reverse-proxy}"
-
-DOCKER_DEVBOX_BRANCH="${DOCKER_DEVBOX_BRANCH-master}"
-
-if [[ -d "${DOCKER_DEVBOX_HOME}" ]]; then
-    if [[ -z "${DOCKER_DEVBOX_DISABLE_UPDATE}" ]]; then
-        echo "Update Docker Devbox" 2>&1 |& tee -a "$_LOG"
-        git -C "${DOCKER_DEVBOX_HOME}" fetch --recurse-submodules &>> "$_LOG"
-        git -C "${DOCKER_DEVBOX_HOME}" reset --hard "origin/$DOCKER_DEVBOX_BRANCH"  &>> "$_LOG"
-        git -C "${DOCKER_DEVBOX_HOME}" submodule foreach --recursive git reset --hard origin/master &>> "$_LOG"
-    else
-        echo "Docker Devbox update is disabled" 2>&1 |& tee -a "$_LOG"
-    fi
-else
-    echo "Install Docker Devbox" 2>&1 >> "$_LOG"
-    if [[ -z "${DOCKER_DEVBOX_MINIMAL}" ]]; then
-      git clone --recurse-submodules -b "$DOCKER_DEVBOX_BRANCH" https://github.com/inetum-orleans/docker-devbox "${DOCKER_DEVBOX_HOME}"
-    else
-      git clone https://github.com/inetum-orleans/docker-devbox -b "$DOCKER_DEVBOX_BRANCH" "${DOCKER_DEVBOX_HOME}"
-    fi
-fi
 
 mkdir -p $DOCKER_DEVBOX_BIN
 mkdir -p $DOCKER_DEVBOX_DOT_BIN
@@ -176,20 +177,19 @@ fi
 echo "Create $DOCKER_DEVBOX_REVERSE_PROXY_NETWORK docker network" 2>&1 |& tee -a "$_LOG"
 docker network create "$DOCKER_DEVBOX_REVERSE_PROXY_NETWORK" &>> "$_LOG" || true
 
-if [[ -z "${DOCKER_DEVBOX_MINIMAL}" ]]; then
-    if [[ -z "${DOCKER_DEVBOX_DISABLE_SMARTCD}" ]]; then
-        echo "Install SmartCD" 2>&1 |& tee -a "$_LOG"
-        cd /tmp &>> "$_LOG"
-        rm -Rf smartcd &>> "$_LOG"
-        git clone https://github.com/inetum-orleans/smartcd.git &>> "$_LOG"
-        cd smartcd &>> "$_LOG"
-        make install &>> "$_LOG"
-        source load_smartcd &>> "$_LOG"
-        rm -Rf smartcd &>> "$_LOG"
-        cd $HOME &>> "$_LOG"
+if [[ -n "${DOCKER_DEVBOX_SMARTCD_BRANCH}" ]]; then
+    echo "Install SmartCD" 2>&1 |& tee -a "$_LOG"
+    cd /tmp &>> "$_LOG"
+    rm -Rf smartcd &>> "$_LOG"
+    git clone -b ${DOCKER_DEVBOX_SMARTCD_BRANCH} https://github.com/inetum-orleans/smartcd.git &>> "$_LOG"
+    cd smartcd &>> "$_LOG"
+    make install &>> "$_LOG"
+    source load_smartcd &>> "$_LOG"
+    rm -Rf smartcd &>> "$_LOG"
+    cd $HOME &>> "$_LOG"
 
-        if [[ ! -f "$HOME/.smartcd_config" ]]; then
-            cat << 'EOF' > $HOME/.smartcd_config
+    if [[ ! -f "$HOME/.smartcd_config" ]]; then
+        cat << 'EOF' > $HOME/.smartcd_config
 # Load and configure smartcd
 source $HOME/.smartcd/lib/core/arrays
 source $HOME/.smartcd/lib/core/varstash
@@ -209,77 +209,97 @@ SMARTCD_LEGACY=1
 SMARTCD_QUIET=1
 # VARSTASH_QUIET=1
 EOF
-            echo "SmartCD configuration file has been written (~/.smartcd_config)" 2>&1 |& tee -a "$_LOG"
-        fi
+        echo "SmartCD configuration file has been written (~/.smartcd_config)" 2>&1 |& tee -a "$_LOG"
+    fi
 
-        cat $HOME/.bashrc | grep .smartcd_config &> /dev/null
-        BASHRC_CONFIGURED=$?
-        if [[ "$BASHRC_CONFIGURED" -ne 0 ]]; then
-            cat << 'EOF' >> "$HOME/.bashrc"
+    cat $HOME/.bashrc | grep .smartcd_config &> /dev/null
+    BASHRC_CONFIGURED=$?
+    if [[ "$BASHRC_CONFIGURED" -ne 0 ]]; then
+        cat << 'EOF' >> "$HOME/.bashrc"
 
 # SmartCD Configuration
 [ -r "$HOME/.smartcd_config" ] && ( [ -n $BASH_VERSION ] || [ -n $ZSH_VERSION ] ) && source $HOME/.smartcd_config
 EOF
-            echo "SmartCD registered (~/.bashrc)" 2>&1 |& tee -a "$_LOG"
-        fi
-    else
-        echo "SmartCD is disabled" 2>&1 |& tee -a "$_LOG"
+        echo "SmartCD registered (~/.bashrc)" 2>&1 |& tee -a "$_LOG"
     fi
-
-    echo "Cleanup project configuration files" &>> "$_LOG"
-    rm -f "$DOCKER_DEVBOX_HOME"/traefik/acme.json &>> "$_LOG"
-    rm -f "$DOCKER_DEVBOX_HOME"/traefik/config/*.toml &>> "$_LOG"
-    rm -f "$DOCKER_DEVBOX_HOME"/certs/*.crt &>> "$_LOG"
-    rm -f "$DOCKER_DEVBOX_HOME"/certs/*.key &>> "$_LOG"
-
-    if [[ -z "${DOCKER_DEVBOX_DISABLE_REVERSE_PROXY}" ]]; then
-        echo "Use traefik as reverse proxy"
-        cd "${DOCKER_DEVBOX_HOME}"/traefik &>> "$_LOG"
-        echo "Stop traefik" 2>&1 |& tee -a "$_LOG"
-        docker compose down --remove-orphans &>> "$_LOG"
-        echo "Install traefik" 2>&1 |& tee -a "$_LOG"
-        touch acme.json
-        ddb configure &>> "$_LOG" || true
-        docker compose pull &>> "$_LOG" || true
-        echo "Start traefik" 2>&1 |& tee -a "$_LOG"
-        docker compose up --build -d &>> "$_LOG"
-        cd $HOME &>> "$_LOG"
-    else
-        echo "Reverse proxy is disabled" 2>&1 |& tee -a "$_LOG"
-    fi
-
-    cd "${DOCKER_DEVBOX_HOME}"/cfssl &>> "$_LOG"
-    echo "Stop CFSSL" 2>&1 |& tee -a "$_LOG"
-    docker compose down --remove-orphans &>> "$_LOG"
-    if [[ -z "${DOCKER_DEVBOX_DISABLE_CFSSL}" ]]; then
-       echo "Install CFSSL" 2>&1 |& tee -a "$_LOG"
-       ddb configure &>> "$_LOG" || true
-       docker compose pull &>> "$_LOG" || true
-       echo "Start CFSSL" 2>&1 |& tee -a "$_LOG"
-       docker compose up --build -d &>> "$_LOG"
-    else
-        echo "CFSSL is disabled" 2>&1 |& tee -a "$_LOG"
-    fi
-    cd $HOME &>> "$_LOG"
-
-    cd "${DOCKER_DEVBOX_HOME}"/portainer &>> "$_LOG"
-    echo "Stop portainer" 2>&1 |& tee -a "$_LOG"
-    docker compose down --remove-orphans &>> "$_LOG"
-    if [[ -z "${DOCKER_DEVBOX_DISABLE_PORTAINER}" ]]; then
-         echo "Install portainer" 2>&1 |& tee -a "$_LOG"
-         ddb configure &>> "$_LOG" || true
-         docker compose pull &>> "$_LOG" || true
-         echo "Start portainer" 2>&1 |& tee -a "$_LOG"
-         docker compose up --build -d &>> "$_LOG"
-    else
-        echo "Portainer is disabled" 2>&1 |& tee -a "$_LOG"
-    fi
-    cd $HOME &>> "$_LOG"
-
-    echo "Docker Devbox installation is terminated." 2>&1 |& tee -a "$_LOG"
 else
-    echo "Docker Devbox installation is terminated (minimal)." 2>&1 |& tee -a "$_LOG"
+    echo "SmartCD is disabled" 2>&1 |& tee -a "$_LOG"
 fi
+
+# Traefik
+if [[ -d "$DOCKER_DEVBOX_HOME/traefik" ]]; then
+    echo "Traefik : removing existing traefik installation" &>> "$_LOG"
+    echo "Stop traefik" 2>&1 |& tee -a "$_LOG"
+    cd "$DOCKER_DEVBOX_HOME/traefik" &>> "$_LOG"
+    docker compose down --remove-orphans --volumes &>> "$_LOG"
+    cd $HOME &>> "$_LOG"
+    rm -rf "$DOCKER_DEVBOX_HOME"/traefik &>> "$_LOG"
+    rm -rf "$DOCKER_DEVBOX_HOME"/certs &>> "$_LOG"
+fi
+
+if [[ -n "${DOCKER_DEVBOX_TRAEFIK_BRANCH}" ]]; then
+
+    echo "Use traefik as reverse proxy" 2>&1 |& tee -a "$_LOG"
+    git clone -b ${DOCKER_DEVBOX_TRAEFIK_BRANCH} https://github.com/inetum-orleans/docker-devbox-traefik.git "$DOCKER_DEVBOX_HOME/traefik" &>> "$_LOG"
+    cd "${DOCKER_DEVBOX_HOME}"/traefik &>> "$_LOG"
+    echo "Install traefik" 2>&1 |& tee -a "$_LOG"
+    touch acme.json
+    mkdir -p "$DOCKER_DEVBOX_HOME"/certs
+    ddb configure &>> "$_LOG" || true
+    docker compose pull &>> "$_LOG" || true
+    echo "Start traefik" 2>&1 |& tee -a "$_LOG"
+    docker compose up --build -d &>> "$_LOG"
+    cd $HOME &>> "$_LOG"
+else
+    echo "Reverse proxy is disabled" 2>&1 |& tee -a "$_LOG"
+fi
+
+# CFSSL
+if [[ -d "$DOCKER_DEVBOX_HOME/cfssl" ]]; then
+    echo "CFSSL : removing existing cfssl installation" &>> "$_LOG"
+    echo "Stop CFSSL" 2>&1 |& tee -a "$_LOG"
+    cd "$DOCKER_DEVBOX_HOME/cfssl" &>> "$_LOG"
+    docker compose down --remove-orphans --volumes &>> "$_LOG"
+    cd $HOME &>> "$_LOG"
+    rm -rf "$DOCKER_DEVBOX_HOME"/cfssl &>> "$_LOG"
+fi
+
+if [[ -n "${DOCKER_DEVBOX_CFSSL_BRANCH}" ]]; then
+    echo "Install CFSSL" 2>&1 |& tee -a "$_LOG"
+    git clone -b ${DOCKER_DEVBOX_CFSSL_BRANCH} https://github.com/inetum-orleans/docker-devbox-cfssl.git "$DOCKER_DEVBOX_HOME/cfssl" &>> "$_LOG"
+    cd "${DOCKER_DEVBOX_HOME}"/cfssl &>> "$_LOG"
+    ddb configure &>> "$_LOG"
+    docker compose pull &>> "$_LOG"
+    echo "Start CFSSL" 2>&1 |& tee -a "$_LOG"
+    docker compose up --build -d &>> "$_LOG"
+else
+    echo "CFSSL is disabled" 2>&1 |& tee -a "$_LOG"
+fi
+
+# Portainer
+if [[ -d "$DOCKER_DEVBOX_HOME/portainer" ]]; then
+    echo "Portainer : removing existing portainer installation" &>> "$_LOG"
+    echo "Stop portainer" 2>&1 |& tee -a "$_LOG"
+    cd "$DOCKER_DEVBOX_HOME/portainer" &>> "$_LOG"
+    docker compose down --remove-orphans --volumes &>> "$_LOG"
+    cd $HOME &>> "$_LOG"
+    rm -rf "$DOCKER_DEVBOX_HOME"/portainer &>> "$_LOG"
+fi
+
+if [[ -n "${DOCKER_DEVBOX_PORTAINER_BRANCH}" ]]; then
+    echo "Install portainer" 2>&1 |& tee -a "$_LOG"
+    git clone -b ${DOCKER_DEVBOX_PORTAINER_BRANCH} https://github.com/inetum-orleans/docker-devbox-portainer.git "$DOCKER_DEVBOX_HOME/portainer" &>> "$_LOG"
+    cd "${DOCKER_DEVBOX_HOME}"/portainer &>> "$_LOG"
+    ddb configure &>> "$_LOG" || true
+    docker compose pull &>> "$_LOG" || true
+    echo "Start portainer" 2>&1 |& tee -a "$_LOG"
+    docker compose up --build -d &>> "$_LOG"
+else
+    echo "Portainer is disabled" 2>&1 |& tee -a "$_LOG"
+fi
+
+echo "Docker Devbox installation is terminated." 2>&1 |& tee -a "$_LOG"
+
 
 if [[ -f $HOME/.smartcd_config ]]; then
   source $HOME/.smartcd_config
