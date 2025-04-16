@@ -6,3 +6,9 @@ ddb.yaml
 ddb.yml
 ddb.local.yaml
 ddb.local.yml
+
+# Ignore child projects
+ddb
+traefik
+portainer
+cfssl
