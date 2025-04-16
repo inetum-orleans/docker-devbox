@@ -188,27 +188,34 @@ mkcert -install
 
 Environment variables available for installer script:
 
-- `DOCKER_DEVBOX_MINIMAL`: Clone docker-devbox repository and create reverse-proxy network only.
-- `DOCKER_DEVBOX_DDB_VERSION`: Install a specific version of ddb (ex: `v2.0.1`). When unset, gets the latest version
-- `DOCKER_DEVBOX_DISABLE_SMARTCD`: Disable SmartCD.
-- `DOCKER_DEVBOX_DISABLE_CFSSL`: Disable CFSSL.
-- `DOCKER_DEVBOX_DISABLE_PORTAINER`: Disable portainer.
-- `DOCKER_DEVBOX_DISABLE_REVERSE_PROXY`: Disable reverse-proxy feature.
-- `DOCKER_DEVBOX_DISABLE_UPDATE`: Disable update of docker-devbox. This may be useful when running installer right from
-  local repository.
-- `DOCKER_DEVBOX_CI`: Equivalent to `DOCKER_DEVBOX_MINIMAL` and `DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES`,
-  recommanded for CI.
-- `DOCKER_DEVBOX_BRANCH`: Use a custom docker-devbox branch.
-- `DOCKER_DEVBOX_LEGACY`: Install legacy bash docker-devbox scripts that were used
-  before [ddb](https://github.com/inetum-orleans/docker-devbox-ddb).
-- `DOCKER_DEVBOX_DDB_ASSET_NAME`: Custom [ddb release](https://github.com/inetum-orleans/docker-devbox-ddb/releases)
-  asset name to install ddb. Set to "ddb-linux-older-glibc" to install on
-  older linux distributions, like Ubuntu 16.04. You should also add this value to `core.release_asset_name` in ddb
-  configuration to make `self-update` command download this asset.
-- `DOCKER_DEVBOX_CURL_OPTS_GITHUB_API`: Additional curl options to pass when accessing github api. You can set this
-  variable to `-u <username:token>` using a Github Personnal Access Token if you encounter 403 errors due to rate
-  limiting.
-- `DOCKER_DEVBOX_SKIP_DOCKER_CHECKS`: Force installation even if `docker` or `docker compose` binaries are unavailable.
+- Partial installs:
+  - `DOCKER_DEVBOX_DISABLE_SMARTCD`: Disable SmartCD.
+  - `DOCKER_DEVBOX_DISABLE_CFSSL`: Disable CFSSL.
+  - `DOCKER_DEVBOX_DISABLE_PORTAINER`: Disable portainer.
+  - `DOCKER_DEVBOX_DISABLE_REVERSE_PROXY`: Disable reverse-proxy feature (traefik).
+  - `DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES`: Disable the installation of mkcert.
+  - `DOCKER_DEVBOX_MINIMAL`: Creates the required folder, download the `ddb` binary and create reverse-proxy network only.
+  Does not install other tools like smartcd, cfssl, portainer, etc.
+  - `DOCKER_DEVBOX_CI`: Equivalent to `DOCKER_DEVBOX_MINIMAL` and `DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES`,
+    recommanded for CI.
+- Specific version installs:
+  - `DOCKER_DEVBOX_DDB_VERSION`: Install a specific version of ddb (ex: `v2.0.1`). When unset, gets the latest version
+  - `DOCKER_DEVBOX_SMARTCD_BRANCH`: Use a specific [smartcd (inetum fork)](https://github.com/inetum-orleans/smartcd) branch.
+  - `DOCKER_DEVBOX_CFSSL_BRANCH`: Use a specific [docker-devbox-cfssl](https://github.com/inetum-orleans/docker-devbox-cfssl) branch.
+  - `DOCKER_DEVBOX_PORTAINER_BRANCH`: Use a specific [docker-devbox-portainer](https://github.com/inetum-orleans/docker-devbox-portainer) branch.
+  - `DOCKER_DEVBOX_TRAEFIK_BRANCH`: Use a specific [docker-devbox-traefik](https://github.com/inetum-orleans/docker-devbox-traefik) branch.
+  - `DOCKER_DEVBOX_DDB_ASSET_NAME`: Custom [ddb release](https://github.com/inetum-orleans/docker-devbox-ddb/releases)
+    asset name to install ddb. It was set to "ddb-linux-older-glibc" to install ddb on
+    older linux distributions, like Ubuntu 16.04. This asset is not compiled anymore, but the option sticked.
+    You should also add this value to `core.release_asset_name` in ddb
+    configuration to make `self-update` command download this asset.
+- Misc:
+  - `DOCKER_DEVBOX_CURL_OPTS_GITHUB_API`: Additional curl options to pass when accessing github api. You can set this
+    variable to `-u <username:token>` using a Github Personnal Access Token if you encounter 403 errors due to rate
+    limiting.
+  - `DOCKER_DEVBOX_SKIP_DOCKER_CHECKS`: Force installation even if `docker` binary is unavailable.
+  - `DOCKER_DEVBOX_REVERSE_PROXY_NETWORK`: Name of the reverse proxy network. Default is `reverse-proxy`.
+  - `DOCKER_DEVBOX_ALLOW_ROOT`: Allow the script to be run as root. This is not recommended.
 
 Environment variables can be set right before bash invocation in the installer one-liner.
 
@@ -217,33 +224,3 @@ curl -L https://github.com/inetum-orleans/docker-devbox/raw/master/installer | \
 DOCKER_DEVBOX_CI=1 \
 bash
 ```
-
-# Initialize a new project
-
-Use [Yeoman](https://yeoman.io/)
-with [inetum-orleans/generator-docker-devbox](https://github.com/inetum-orleans/generator-docker-devbox) generator to
-scaffold a new project from interactive questions.
-
-As an alternative, you may grab a sample project
-from [inetum-orleans/docker-devbox-examples](https://github.com/inetum-orleans/docker-devbox-examples) repository, and
-edit to fit your needs.
-
-## Make project commands available globally
-
-If you need to access some commands from a docker-devbox project globally from any other directory inside your host,
-you may run the following command from the project directory.
-
-```
-docker-devbox bin global
-```
-
-This bring the project commands from projects `.bin` directory into the current user `~/bin` directory, and configures
-them for an external usage. This directory is in the user `PATH` by default on most linux distribution, but you may
-have to restart the shell at the first time.
-
-To remove global commands from a project, run the following command from the project directory.
-
-```
-docker-devbox bin local
-```
-
