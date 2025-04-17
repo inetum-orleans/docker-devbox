@@ -16,5 +16,11 @@ ddb self-update
 
 SERVICES=("cfssl" "portainer" "traefik")
 for SERVICE in "${SERVICES[@]}"; do
-    cd "${DOCKER_DEVBOX_HOME}/${SERVICE}" && git pull && ddb configure && docker compose up -d --pull always
+    if [[ -d "${DOCKER_DEVBOX_HOME}/${SERVICE}" ]]
+    then
+        cd "${DOCKER_DEVBOX_HOME}/${SERVICE}" &&\
+        git pull &&\
+        ddb configure &&\
+        docker compose up -d --pull always
+    fi
 done

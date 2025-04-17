@@ -22,7 +22,10 @@ echo "Removing docker devbox installed at $DOCKER_DEVBOX_HOME"
 
 SERVICES=("cfssl" "portainer" "traefik")
 for SERVICE in "${SERVICES[@]}"; do
-    cd "${DOCKER_DEVBOX_HOME}/${SERVICE}" && docker compose down -v --remove-orphans
+    if [[ -d "${DOCKER_DEVBOX_HOME}/${SERVICE}" ]]
+    then
+        cd "${DOCKER_DEVBOX_HOME}/${SERVICE}" && docker compose down -v --remove-orphans
+    fi
 done
 
 cd $HOME
