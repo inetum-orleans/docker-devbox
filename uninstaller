@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# Uninstaller for Docker Devbox
+# This script is intended to be run as a non-root user
+# You can run it like this:
+# curl -L https://github.com/inetum-orleans/docker-devbox/raw/master/uninstaller | bash
 
 if [[ $EUID -eq 0 ]]
 then
@@ -6,15 +10,25 @@ then
     exit 1
 fi
 
-DOCKER_DEVBOX_HOME=$(cd -P -- "$(dirname -- "$0")" && pwd -P)
-echo $DOCKER_DEVBOX_HOME
+DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-$HOME/.docker-devbox}"
 
-cd "${DOCKER_DEVBOX_HOME}"/cfssl && docker compose down -v --remove-orphans && cd "${DOCKER_DEVBOX_HOME}"
-cd "${DOCKER_DEVBOX_HOME}"/portainer && docker compose down -v --remove-orphans && docker compose up -d && cd "${DOCKER_DEVBOX_HOME}"
-cd "${DOCKER_DEVBOX_HOME}"/traefik && docker compose down -v --remove-orphans && docker compose up -d && cd "${DOCKER_DEVBOX_HOME}"
+if [[ ! -d "$DOCKER_DEVBOX_HOME" ]]
+then
+    echo "Docker devbox not found at $DOCKER_DEVBOX_HOME"
+    exit 1
+fi
 
+echo "Removing docker devbox installed at $DOCKER_DEVBOX_HOME"
+
+SERVICES=("cfssl" "portainer" "traefik")
+for SERVICE in "${SERVICES[@]}"; do
+    cd "${DOCKER_DEVBOX_HOME}/${SERVICE}" && docker compose down -v --remove-orphans
+done
+
+cd $HOME
 rm -Rf "$HOME/.smartcd"
 rm -Rf "$HOME/.smartcd_config"
+rm -Rf "${DOCKER_DEVBOX_HOME}"
 
-echo "Run the following command in your shell to terminate uninstall:"
-echo "cd ~ && rm -Rf \"${DOCKER_DEVBOX_HOME}\""
+echo "Docker devbox is uninstalled. We will miss you!"
+echo "Please not that some PATH variable configuration might still be remaining in your .bashrc/.bash_profile"
