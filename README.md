@@ -1,12 +1,20 @@
 docker-devbox
 =============
 
+![Docker Devbox logo](docs/logo/Logo-text.svg)
+
 Docker Devbox is a set of tools build on top of Docker that automates environments setup for web applications, from
 development to production.
+You can see it as a linux machine (a box) that contains several tools for web developers, the biggest one being docker.
 
 It relies on [ddb](https://inetum-orleans.github.io/docker-devbox-ddb/), a command line tool that provides
 features to generate, activate and adjust configuration files based on a single overridable and extendable
 configuration, while enhancing the developer experience and reducing manual operations.
+
+This project has no relationship with [Microsoft Dev Box](https://azure.microsoft.com/en-us/products/dev-box)
+that has been created after this project.
+
+Docker Devbox does not need Docker Desktop, and, as we understand it, is usable in a commercial company at no cost.
 
 # Design goals
 
@@ -34,34 +42,44 @@ configuration, while enhancing the developer experience and reducing manual oper
   and [fixuid](https://github.com/boxboat/fixuid) integration.
 * Configure each target environment (`dev`, `stage`, `prod`) with environment variables only.
 * Introduce environment variables into configuration files with a template
-  engine ([Mo - Mustache Templates in Bash](https://github.com/tests-always-included/mo)).
+  engine ([Jinja](https://jinja.palletsprojects.com/en/stable/), [Jsonnet](https://jsonnet.org/) and [ytt](https://carvel.dev/ytt/)) and automatically add them to the .gitignore file.
 * Enable configuration files matching the active environment with simple symlinks creation
-  automation ([mo pure bash templating engine](https://github.com/tests-always-included/mo)).
+  automation.
 * Switch to a real public domain name with no pain ([Traefik](https://traefik.io/)
   and [Let's Encrypt](https://letsencrypt.org/)).
-* Access application from a private network remotely through an automated SSH tunnel ([ngrok](https://ngrok.com/)
-  , [Serveo](https://serveo.net/) or [ssi.sh](https://github.com/antoniomika/sish))
+* DJP (ddb jsonnet packages): docker + configuration + tools to quickly bootstrap a project ([Cookiecutter](https://github.com/cookiecutter/cookiecutter))
+* ...
 
-# Requirements
+# Setup
+## Requirements
 
-Docker Devbox runs natively on any Linux only, but Windows and MacOS users may use
-[docker-devbox-vagrant](https://github.com/inetum-orleans/docker-devbox-vagrant) to run it inside a Vagrant managed
-VirtualBox VM based on Ubuntu Server.
+As the name implies, Docker Devbox requires the docker engine for linux.
+This mean that Windows and MacOS users will need to host a linux in some way.
+There is no need to use Docker Desktop for that.
 
-* Docker >= 18.09.6
-* Docker compose plugin >= 2
+To ease the installation of such environment on windows, you may use:
+- WSL2 with [docker-devbox-wsl](https://github.com/inetum-orleans/docker-devbox-wsl)
+- Vagrant + Virtualbox with [docker-devbox-vagrant](https://github.com/inetum-orleans/docker-devbox-vagrant)
+
+If you decide to go the manual route, you will need:
+* Docker with docker compose plugin v2
 * GNU Bash >= 4.0
 * curl
 
-# Install or Update
+## Devbox installation environment
 
-```
+```sh
 curl -L https://github.com/inetum-orleans/docker-devbox/raw/master/installer | bash
 ```
 
-This will install everything required for Docker Devbox, but docker, docker compose and bash should be installed
-manually
-before.
+You may customize the installation by passing environment variables to the bash command, see the example at the bottom of the [Installation environment variables](#installation-environment-variables) section.
+
+This will install everything required for Docker Devbox, but docker,
+docker compose and bash should be installed manually before.
+
+It will also install:
+* [Traefik](https://traefik.io/) : A container used to route the network traffic on port 80/443 to the right application. (See the [Configuration with a DNS](#configuration-with-a-dns) section)
+* [CFSSL](https://github.com/cloudflare/cfssl) : A container to generate HTTPS certificates for the apps in your docker containers.
 
 Docker Devbox will install [Traefik](https://traefik.io/) in a docker container and binds `tcp/80`,`tcp/443` to host,
 so those ports should be available.
@@ -70,119 +88,9 @@ Port `tcp/7780` should also be available for CFSSL container (local certificate 
 
 *Installation script may ask for sudo password to install some dependencies, like curl, git and make.*
 
-## Development domain name configuration (`.test`)
+Open a browser and check that you can navigate to `http://<ip of your devbox>/` you should see the traefik's "404 page not found".
 
-To access application through `.test` development domain name, you have to setup your system for those domains to be
-resolved as docker host IP.
-
-On Linux, dnsmasq can be used for this purpose.
-
-On Windows, Acrylic DNS proxy can be used for this purpose.
-
-#### Linux (dnsmasq)
-
-- Ubuntu Server (without NetworkManager)
-
-```
-sudo apt-get install -y dnsmasq
-
-DOCKER_HOST_IP=$(ip -4 addr show docker0 | grep -Po 'inet \K[\d.]+')
-sudo sh -c "echo address=/.test/$DOCKER_HOST_IP>/etc/dnsmasq.d/test-domain-to-docker-host-ip"
-
-sudo service dnsmasq restart
-```
-
-- Ubuntu Desktop (with NetworkManager)
-
-NetworkManager from desktop brings it's own dnsmasq daemon.
-
-```
-sudo mv /etc/resolv.conf /etc/resolve.conf.bak
-sudo ln -s /var/run/NetworkManager/resolv.conf /etc/resolv.conf
-
-sudo sh -c 'cat << EOF > /etc/NetworkManager/conf.d/use-dnsmasq.conf
-[main]
-dns=dnsmasq
-EOF'
-
-sudo sh -c 'cat << EOF > /etc/NetworkManager/dnsmasq.d/test-domain-to-docker-host-ip
-address=/.test/$(ip -4 addr show docker0 | grep -Po "inet \K[\d.]+")
-EOF'
-
-sudo service NetworkManager restart
-```
-
-#### Windows (Acrylic DNS proxy)
-
-Download [Acrylic DNS proxy](https://mayakron.altervista.org) for Windows, and perform installation.
-
-Then open Acrylic UI and configure the Host configuration with such entry
-
-```
-192.168.1.100 *.test
-```
-
-The IP address should match the IP of the docker engine.
-
-## Configure local CA certificate
-
-Docker Devbox automatically generates development certificate for HTTPS support, but you need to register the local
-CA certificate using mkcert.
-
-#### Linux
-
-Run the following commands from docker devbox shell.
-
-```
-# This dependency is required to support Chrome and Firefox.
-sudo apt-get install libnss3-tools
-
-# Uninstall any previous CA cert
-mkcert -uninstall
-
-# Move to cfssl container directory
-cd ~/.docker-devbox/cfssl
-
-# Replace default mkcert key/pair with CFSSL public key.
-rm -Rf $(mkcert -CAROOT) && mkdir -p $(mkcert -CAROOT)
-docker compose cp intermediate:/etc/cfssl/ca.pem $(mkcert -CAROOT)/rootCA.pem
-
-# Install CFSSL CA Certificate with mkcert.
-mkcert -install 
-```
-
-#### Windows
-
-On Windows, you should install the CA certificate inside the VM where docker-devbox is installed with the previous
-linux procedure, but you should also install the CA certificate on your host, for browser to aknowlegdge the
-development certificates.
-
-- Download [mkcert for Windows](https://github.com/FiloSottile/mkcert/releases), and set `CAROOT` environment variable
-  to some directory, like `C:\mkcert-ca`.
-
-- Extract the CFSSL ca certificate from docker with the following command
-
-```
-# Inside docker-devbox shell
-cd ~/.docker-devbox/cfssl
-docker compose cp intermediate:/etc/cfssl/ca.pem ../certs/mkcert-ca/rootCA.pem
-```
-
-- Copy `~/.docker-devbox/certs/mkcert-ca/rootCA.pem` to the host, inside `CAROOT`
-  directory.
-
-- Close all `cmd.exe`, and open a new one to check that `CAROOT` environment variable is defined.
-
-```
-# This should output CAROOT environment variable
-mkcert -CAROOT
-```
-
-- Install CA certificate
-
-```
-mkcert -install
-```
+// TODO: write a ddb project that can check if we can navigate to an app on port 1212
 
 ## Installation environment variables
 
@@ -224,3 +132,45 @@ curl -L https://github.com/inetum-orleans/docker-devbox/raw/master/installer | \
 DOCKER_DEVBOX_CI=1 \
 bash
 ```
+
+# Optional setup
+## Configuration with a DNS
+
+Using an IP address like `http://192.168.99.100:1212/` is not very convenient because:
+* We need to remember the IP address and the port of our application
+* If we need to run multiple applications at the same time, we need to open several ports
+* If several devs have different configurations, the IP/Port might not be the same across the team.
+
+It would be better to use a name like `http://myapp.test` and `http://mysecondapp.test`, and be able to call both of them at once.
+Even better, sometimes we need apis, and we can call them at `http://api.myapp.test` and share cookies with it because it is a subdomain. You're likely to have that kind of domain hierarchy in prod anyway, and being able to figure out things like CORS locally is really valuable.
+
+Lastly, if you want to let traefik handle the complexity of https certificates ([see next section](#generate-certificates-for-your-applications)) for you and your application, it needs a way to route your request to your app, and the domain name is the easiest way.
+
+[Read on to know how to configure the DNS for your apps](docs/dns.md)
+
+## Generate HTTPS certificates for your applications
+
+More and more websites are using https (if not most), but the same cannot be said of development environments or even QA environments, which are often HTTP because generating valid HTTPS certificates on internal network can be a headache.
+
+However, [more and more features are requiring a Secure Context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts/features_restricted_to_secure_contexts).
+
+What if it could be done as easily as:
+
+```bash
+ddb configure
+dc up -d
+```
+?
+
+[You just need to install the certificates on your machine :wink:](docs/certs.md)
+
+# Story
+The project began at Orléans, France, at Inetum (formerly known as GFI) around 2019 as a way to improve and standardize the developers workflow in the company.
+
+The project has changed and improved since then, but it's used daily by the developers at Inetum Orléans.
+
+# Acknowledgments
+
+- [@toilal](https://github.com/toilal) for the original idea and dev
+- Axel Boulet for the logo design
+- All the devs at Inetum Orléans that are using the Docker Devbox daily and are providing feedback to improve it.
