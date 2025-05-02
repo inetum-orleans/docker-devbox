@@ -1,8 +1,11 @@
 docker-devbox
 =============
 
+![Docker Devbox logo](docs/logo/Logo-text.svg)
+
 Docker Devbox is a set of tools build on top of Docker that automates environments setup for web applications, from
 development to production.
+You can see it as a linux machine (a box) that contains several tools for web developers, the biggest one being docker.
 
 It relies on [ddb](https://inetum-orleans.github.io/docker-devbox-ddb/), a command line tool that provides
 features to generate, activate and adjust configuration files based on a single overridable and extendable
@@ -89,37 +92,6 @@ Open a browser and check that you can navigate to `http://<ip of your devbox>/` 
 
 // TODO: write a ddb project that can check if we can navigate to an app on port 1212
 
-# Optional setup
-## Configuration with a DNS
-
-Using an IP address like `http://192.168.99.100:1212/` is not very convenient because:
-* We need to remember the IP address and the port of our application
-* If we need to run multiple applications at the same time, we need to open several ports
-* If several devs have different configurations, the IP/Port might not be the same across the team.
-
-It would be better to use a name like `http://myapp.test` and `http://mysecondapp.test`, and be able to call both of them at once.
-Even better, sometimes we need apis, and we can call them at `http://api.myapp.test` and share cookies with it because it is a subdomain. You're likely to have that kind of domain hierarchy in prod anyway, and being able to figure out things like CORS locally is really valuable.
-
-Lastly, if you want to let traefik handle the complexity of https certificates ([see next section](#generate-certificates-for-your-applications)) for you and your application, it needs a way to route your request to your app, and the domain name is the easiest way.
-
-[Read on to know how to configure the DNS for your apps](docs/dns.md)
-
-## Generate HTTPS certificates for your applications
-
-More and more websites are using https (if not most), but the same cannot be said of development environments or even QA environments, which are often HTTP because generating valid HTTPS certificates on internal network can be a headache.
-
-However, [more and more features are requiring a Secure Context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts/features_restricted_to_secure_contexts).
-
-What if it could be done as easily as:
-
-```bash
-ddb configure
-dc up -d
-```
-?
-
-[You just need to install the certificates on your machine :wink:](docs/certs.md)
-
 ## Installation environment variables
 
 Environment variables available for installer script:
@@ -160,3 +132,45 @@ curl -L https://github.com/inetum-orleans/docker-devbox/raw/master/installer | \
 DOCKER_DEVBOX_CI=1 \
 bash
 ```
+
+# Optional setup
+## Configuration with a DNS
+
+Using an IP address like `http://192.168.99.100:1212/` is not very convenient because:
+* We need to remember the IP address and the port of our application
+* If we need to run multiple applications at the same time, we need to open several ports
+* If several devs have different configurations, the IP/Port might not be the same across the team.
+
+It would be better to use a name like `http://myapp.test` and `http://mysecondapp.test`, and be able to call both of them at once.
+Even better, sometimes we need apis, and we can call them at `http://api.myapp.test` and share cookies with it because it is a subdomain. You're likely to have that kind of domain hierarchy in prod anyway, and being able to figure out things like CORS locally is really valuable.
+
+Lastly, if you want to let traefik handle the complexity of https certificates ([see next section](#generate-certificates-for-your-applications)) for you and your application, it needs a way to route your request to your app, and the domain name is the easiest way.
+
+[Read on to know how to configure the DNS for your apps](docs/dns.md)
+
+## Generate HTTPS certificates for your applications
+
+More and more websites are using https (if not most), but the same cannot be said of development environments or even QA environments, which are often HTTP because generating valid HTTPS certificates on internal network can be a headache.
+
+However, [more and more features are requiring a Secure Context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts/features_restricted_to_secure_contexts).
+
+What if it could be done as easily as:
+
+```bash
+ddb configure
+dc up -d
+```
+?
+
+[You just need to install the certificates on your machine :wink:](docs/certs.md)
+
+# Story
+The project began at Orléans, France, at Inetum (formerly known as GFI) around 2019 as a way to improve and standardize the developers workflow in the company.
+
+The project has changed and improved since then, but it's used daily by the developers at Inetum Orléans.
+
+# Acknowledgments
+
+- [@toilal](https://github.com/toilal) for the original idea and dev
+- Axel Boulet for the logo design
+- All the devs at Inetum Orléans that are using the Docker Devbox daily and are providing feedback to improve it.
