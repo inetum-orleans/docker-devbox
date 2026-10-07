@@ -70,6 +70,24 @@ Port `tcp/7780` should also be available for CFSSL container (local certificate 
 
 *Installation script may ask for sudo password to install some dependencies, like curl, git and make.*
 
+Traefik, CFSSL and Portainer configurations live in the [`services`](services) directory of this repository. The
+installer copies them into `~/.docker-devbox/<service>`, retrieving them from the local checkout when run from one, or
+cloning this repository into `~/.docker-devbox/.src` otherwise.
+
+Reinstalling replaces those service directories, but the local configuration and state they hold are set aside first and
+put back afterwards:
+
+| Path | Contents |
+| --- | --- |
+| `ddb.local.yml`, `ddb.local.yaml` | your own overrides of the service configuration |
+| `traefik/acme.json` | certificates issued by Let's Encrypt |
+| `traefik/config` | per domain TLS configuration written by `ddb configure` |
+| `.certs` | certificates of the service own domain |
+
+The last two are dropped when `DOCKER_DEVBOX_RESET` is set, as a new certificate authority makes them useless.
+Docker volumes, holding the certificate authority and the portainer data, are kept as well. Anything else in a service
+directory is replaced by the repository content, so local edits of the versioned files do not survive.
+
 ## Development domain name configuration (`.test`)
 
 To access application through `.test` development domain name, you have to setup your system for those domains to be
@@ -194,16 +212,27 @@ Environment variables available for installer script:
   - `DOCKER_DEVBOX_DISABLE_PORTAINER`: Disable portainer.
   - `DOCKER_DEVBOX_DISABLE_REVERSE_PROXY`: Disable reverse-proxy feature (traefik).
   - `DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES`: Disable the installation of mkcert.
+  - `DOCKER_DEVBOX_DISABLE_DDB`: Keep the ddb binary already available instead of downloading one. The installer fails
+    if no ddb is found in `~/.docker-devbox/bin` nor in `PATH`. Useful to run the installer against a locally built ddb.
+    Only the download is skipped: `core.github_repository` is still kept aligned as described below.
   - `DOCKER_DEVBOX_MINIMAL`: Creates the required folder, download the `ddb` binary and create reverse-proxy network only.
   Does not install other tools like smartcd, cfssl, portainer, etc.
   - `DOCKER_DEVBOX_CI`: Equivalent to `DOCKER_DEVBOX_MINIMAL` and `DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES`,
     recommanded for CI.
 - Specific version installs:
   - `DOCKER_DEVBOX_DDB_VERSION`: Install a specific version of ddb (ex: `v2.0.1`). When unset, gets the latest version
+  - `DOCKER_DEVBOX_DDB_URL`: Download the ddb binary from this url instead of a github release, which takes precedence
+    over `DOCKER_DEVBOX_DDB_VERSION` and `DOCKER_DEVBOX_DDB_REPOSITORY`. Any protocol supported by curl works, including
+    `file:///path/to/ddb` to install a local build.
+  - `DOCKER_DEVBOX_DDB_REPOSITORY`: Github repository (`owner/name`) to download the ddb release from. Default is
+    `inetum-orleans/docker-devbox-ddb`. The installer keeps `core.github_repository` in `~/.docker-devbox/ddb.yml`
+    aligned with this value so `ddb self-update` uses the same repository, creating or updating that file as needed.
+    A `core` section written in flow style (`core: {...}`) can't be updated automatically and has to be edited manually.
   - `DOCKER_DEVBOX_SMARTCD_BRANCH`: Use a specific [smartcd (inetum fork)](https://github.com/inetum-orleans/smartcd) branch.
-  - `DOCKER_DEVBOX_CFSSL_BRANCH`: Use a specific [docker-devbox-cfssl](https://github.com/inetum-orleans/docker-devbox-cfssl) branch.
-  - `DOCKER_DEVBOX_PORTAINER_BRANCH`: Use a specific [docker-devbox-portainer](https://github.com/inetum-orleans/docker-devbox-portainer) branch.
-  - `DOCKER_DEVBOX_TRAEFIK_BRANCH`: Use a specific [docker-devbox-traefik](https://github.com/inetum-orleans/docker-devbox-traefik) branch.
+  - `DOCKER_DEVBOX_REPOSITORY`: Repository to retrieve services (traefik, cfssl, portainer) from. Default is
+    `https://github.com/inetum-orleans/docker-devbox.git`.
+  - `DOCKER_DEVBOX_BRANCH`: Branch of `DOCKER_DEVBOX_REPOSITORY` to retrieve services from. Default is `master`.
+    Ignored when the installer runs from a local checkout, as services are then taken from the checkout itself.
   - `DOCKER_DEVBOX_DDB_ASSET_NAME`: Custom [ddb release](https://github.com/inetum-orleans/docker-devbox-ddb/releases)
     asset name to install ddb. It was set to "ddb-linux-older-glibc" to install ddb on
     older linux distributions, like Ubuntu 16.04. This asset is not compiled anymore, but the option sticked.
@@ -213,6 +242,10 @@ Environment variables available for installer script:
   - `DOCKER_DEVBOX_CURL_OPTS_GITHUB_API`: Additional curl options to pass when accessing github api. You can set this
     variable to `-u <username:token>` using a Github Personnal Access Token if you encounter 403 errors due to rate
     limiting.
+  - `DOCKER_DEVBOX_RESET`: Reinstall the services from scratch instead of preserving their state: their docker volumes,
+    `~/.docker-devbox/certs` and the certificates of the service directories are removed. This issues a brand new
+    certificate authority, which then has to be trusted again on the clients, and makes every already generated project
+    certificate useless. Local configuration files are still preserved.
   - `DOCKER_DEVBOX_SKIP_DOCKER_CHECKS`: Force installation even if `docker` binary is unavailable.
   - `DOCKER_DEVBOX_REVERSE_PROXY_NETWORK`: Name of the reverse proxy network. Default is `reverse-proxy`.
   - `DOCKER_DEVBOX_ALLOW_ROOT`: Allow the script to be run as root. This is not recommended.

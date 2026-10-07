@@ -1,0 +1,5 @@
+#/usr/bin/env bash
+
+if [[ -e "${DOCKER_DEVBOX_DIR}/acme.json" ]]; then
+  chmod go-rwx "${DOCKER_DEVBOX_DIR}/acme.json"
+fi

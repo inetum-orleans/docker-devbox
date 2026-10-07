@@ -1,0 +1,543 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check shell syntax
+        run: |
+          for script in installer upgrade uninstaller services/traefik/.bash_enter.d/*; do
+            bash -n "$script"
+          done
+          for script in services/cfssl/.docker/cfssl/docker-entrypoint.sh services/cfssl/.docker/cfssl/bin/*; do
+            sh -n "$script"
+          done
+
+      - name: Shellcheck
+        run: |
+          shellcheck --severity=error installer upgrade uninstaller \
+            services/cfssl/.docker/cfssl/docker-entrypoint.sh services/cfssl/.docker/cfssl/bin/*
+
+  ddb-installation:
+    name: ddb installation options
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check ddb can come from a url, or not be downloaded at all
+        run: |
+          stub="$RUNNER_TEMP/stub"
+          mkdir -p "$stub"
+          printf '#!/usr/bin/env bash\nexit 0\n' > "$stub/docker"
+          chmod +x "$stub/docker"
+
+          home="$RUNNER_TEMP/devbox"
+          printf '#!/usr/bin/env bash\necho custom-ddb\n' > "$RUNNER_TEMP/custom-ddb"
+
+          install() {
+            env -i PATH="$stub:/usr/bin:/bin" HOME="$RUNNER_TEMP/fakehome" DOCKER_DEVBOX_HOME="$home" \
+              DOCKER_DEVBOX_MINIMAL=1 DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES=1 \
+              DOCKER_DEVBOX_SKIP_DOCKER_CHECKS=1 "$@" bash ./installer
+          }
+
+          # a custom url is downloaded as is, which file:// makes verifiable without any network
+          rm -rf "$home"
+          install DOCKER_DEVBOX_DDB_URL="file://$RUNNER_TEMP/custom-ddb"
+          cmp "$RUNNER_TEMP/custom-ddb" "$home/bin/ddb"
+          test -x "$home/bin/ddb"
+
+          # a disabled download leaves the installed binary untouched
+          printf '#!/usr/bin/env bash\necho preexisting-ddb\n' > "$home/bin/ddb"
+          chmod +x "$home/bin/ddb"
+          checksum="$(sha256sum < "$home/bin/ddb")"
+          install DOCKER_DEVBOX_DISABLE_DDB=1
+          test "$(sha256sum < "$home/bin/ddb")" = "$checksum"
+
+          # disabling the download without any available binary must fail explicitly
+          rm -rf "$home"
+          if install DOCKER_DEVBOX_DISABLE_DDB=1; then
+            echo "the installer should have failed without any ddb binary"
+            exit 1
+          fi
+
+          # an unreachable url must fail instead of leaving a broken binary behind
+          rm -rf "$home"
+          if install DOCKER_DEVBOX_DDB_URL="file://$RUNNER_TEMP/missing-ddb"; then
+            echo "the installer should have failed on an unreachable url"
+            exit 1
+          fi
+          test ! -e "$home/bin/ddb"
+
+  ddb-repository:
+    name: ddb repository configuration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check core.github_repository stays aligned
+        run: |
+          stub="$RUNNER_TEMP/stub"
+          mkdir -p "$stub"
+          for command in docker ddb; do
+            printf '#!/usr/bin/env bash\nexit 0\n' > "$stub/$command"
+          done
+          printf '#!/usr/bin/env bash\nwhile [[ $# -gt 0 ]]; do [[ "$1" == "-o" ]] && echo stub > "$2"; shift; done\nexit 0\n' > "$stub/curl"
+          chmod +x "$stub"/*
+
+          home="$RUNNER_TEMP/devbox"
+
+          install() {
+            env -i PATH="$stub:/usr/bin:/bin" HOME="$RUNNER_TEMP/fakehome" DOCKER_DEVBOX_HOME="$home" \
+              ${1:+DOCKER_DEVBOX_DDB_REPOSITORY=$1} \
+              DOCKER_DEVBOX_DDB_VERSION=v3.1.0 DOCKER_DEVBOX_MINIMAL=1 \
+              DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES=1 DOCKER_DEVBOX_SKIP_DOCKER_CHECKS=1 \
+              bash ./installer > /dev/null
+          }
+
+          assert_repository() {
+            if ! grep -qx "  github_repository: $1" "$home/ddb.yml"; then
+              echo "expected core.github_repository to be $1"
+              cat "$home/ddb.yml"
+              exit 1
+            fi
+          }
+
+          rm -rf "$home"
+          install Toilal/docker-devbox-ddb
+          assert_repository Toilal/docker-devbox-ddb
+
+          install someone/else
+          assert_repository someone/else
+
+          install ""
+          assert_repository inetum-orleans/docker-devbox-ddb
+
+          rm -rf "$home"
+          mkdir -p "$home"
+          printf 'core:\n  domain:\n    ext: test\ndocker:\n  ip: 172.17.0.1\n' > "$home/ddb.yml"
+          install Toilal/docker-devbox-ddb
+          assert_repository Toilal/docker-devbox-ddb
+          grep -q "ext: test" "$home/ddb.yml"
+          grep -q "ip: 172.17.0.1" "$home/ddb.yml"
+
+          rm -rf "$home"
+          install ""
+          test ! -e "$home/ddb.yml"
+
+  install:
+    name: Install ${{ matrix.mode }} from ${{ matrix.source }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: minimal
+            source: checkout
+          - mode: full
+            source: checkout
+          - mode: full
+            source: repository
+    env:
+      DOCKER_DEVBOX_CURL_OPTS_GITHUB_API: -u x-access-token:${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup installation source
+        run: |
+          if [[ "${{ matrix.mode }}" == "minimal" ]]; then
+            echo "DOCKER_DEVBOX_CI=1" >> "$GITHUB_ENV"
+          fi
+
+          if [[ "${{ matrix.source }}" == "repository" ]]; then
+            # Publish the working tree as a git repository so the installer clones its services from it,
+            # exercising the "curl | bash" code path without depending on a pushed branch.
+            SOURCES="$RUNNER_TEMP/sources"
+            mkdir -p "$SOURCES"
+            tar -c --exclude=.git . | tar -x -C "$SOURCES"
+            git -C "$SOURCES" init -q -b ci
+            git -C "$SOURCES" add -A
+            git -C "$SOURCES" -c user.email=ci@example.com -c user.name=ci commit -qm ci
+            git clone -q --bare "$SOURCES" "$RUNNER_TEMP/docker-devbox.git"
+            echo "DOCKER_DEVBOX_REPOSITORY=$RUNNER_TEMP/docker-devbox.git" >> "$GITHUB_ENV"
+            echo "DOCKER_DEVBOX_BRANCH=ci" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install
+        run: |
+          if [[ "${{ matrix.source }}" == "repository" ]]; then
+            bash < ./installer
+          else
+            ./installer
+          fi
+          echo "$HOME/.docker-devbox/bin" >> "$GITHUB_PATH"
+
+      - name: Check ddb is installed
+        run: |
+          test -x "$HOME/.docker-devbox/bin/ddb"
+          ddb --version
+          docker network inspect reverse-proxy > /dev/null
+
+      - name: Check nothing else is installed
+        if: matrix.mode == 'minimal'
+        run: |
+          for service in traefik cfssl portainer; do
+            if [[ -e "$HOME/.docker-devbox/$service" ]]; then
+              echo "$service should not be installed in minimal mode"
+              exit 1
+            fi
+          done
+          test ! -e "$HOME/.docker-devbox/.src"
+          test -z "$(docker ps -q)"
+
+      - name: Check services files
+        if: matrix.mode == 'full'
+        run: |
+          for service in traefik cfssl portainer; do
+            test -f "$HOME/.docker-devbox/$service/docker-compose.yml.jsonnet"
+            test -f "$HOME/.docker-devbox/$service/docker-compose.yml"
+          done
+          test -f "$HOME/.docker-devbox/traefik/traefik.toml"
+          test -f "$HOME/.docker-devbox/traefik/acme.json"
+          test -d "$HOME/.docker-devbox/traefik/config"
+          test -f "$HOME/.docker-devbox/traefik/.bash_enter.d/80-chmod-acme-json"
+
+      - name: Check services are running
+        if: matrix.mode == 'full'
+        run: |
+          for service in traefik cfssl portainer; do
+            cd "$HOME/.docker-devbox/$service"
+            if ! docker compose ps --status running --format '{{.Name}}' | grep -q .; then
+              echo "no running container for $service"
+              docker compose ps -a
+              exit 1
+            fi
+          done
+
+      - name: Check traefik answers on http
+        if: matrix.mode == 'full'
+        run: |
+          for _ in $(seq 30); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' http://localhost/ || true)"
+            [[ "$code" != "000" ]] && break
+            sleep 2
+          done
+          echo "traefik answered with status $code"
+          [[ "$code" != "000" ]]
+
+      - name: Check portainer is routed through traefik
+        if: matrix.mode == 'full'
+        run: |
+          host="$(docker inspect portainer --format '{{json .Config.Labels}}' | grep -oP 'Host\(`\K[^`]+' | head -1)"
+          echo "portainer is exposed as $host"
+          test -n "$host"
+          for _ in $(seq 30); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' -H "Host: $host" http://localhost/ || true)"
+            [[ "$code" =~ ^(200|30[0-9])$ ]] && break
+            sleep 2
+          done
+          echo "portainer answered with status $code"
+          [[ "$code" =~ ^(200|30[0-9])$ ]]
+
+      - name: Check cfssl answers on its published port
+        if: matrix.mode == 'full'
+        run: |
+          for _ in $(seq 30); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' http://localhost:7780/api/v1/cfssl/health || true)"
+            [[ "$code" != "000" ]] && break
+            sleep 2
+          done
+          echo "cfssl answered with status $code: $(curl -s http://localhost:7780/api/v1/cfssl/health || true)"
+          [[ "$code" != "000" ]]
+
+          # the image is built from this repository, so it must report the pinned version
+          version="$(grep -oP 'ARG CFSSL_VERSION=v?\K[0-9.]+' services/cfssl/.docker/cfssl/Dockerfile)"
+          cd "$HOME/.docker-devbox/cfssl"
+          docker compose exec -T intermediate cfssl version | grep -q "Version: $version"
+          echo "cfssl $version is running"
+
+      - name: Upgrade services
+        if: matrix.mode == 'full'
+        run: |
+          marker="# ci-upgrade-marker"
+
+          if [[ "${{ matrix.source }}" == "repository" ]]; then
+            SOURCES="$RUNNER_TEMP/sources"
+            echo "$marker" >> "$SOURCES/services/traefik/ddb.yml"
+            git -C "$SOURCES" -c user.email=ci@example.com -c user.name=ci commit -qam "ci upgrade"
+            git -C "$SOURCES" push -q "$RUNNER_TEMP/docker-devbox.git" ci
+            bash < ./upgrade
+          else
+            echo "$marker" >> services/traefik/ddb.yml
+            ./upgrade
+          fi
+
+          grep -q "$marker" "$HOME/.docker-devbox/traefik/ddb.yml"
+          test -f "$HOME/.docker-devbox/traefik/acme.json"
+          cd "$HOME/.docker-devbox/traefik"
+          docker compose ps --status running --format '{{.Name}}' | grep -q .
+
+      - name: Uninstall
+        run: |
+          ./uninstaller
+          test ! -e "$HOME/.docker-devbox"
+          test -z "$(docker ps -q)"
+
+      - name: Dump logs
+        if: failure()
+        run: |
+          cat "$HOME/.docker-devbox/docker-devbox-installer.log" || true
+          docker ps -a || true
+          for service in traefik cfssl portainer; do
+            [[ -d "$HOME/.docker-devbox/$service" ]] || continue
+            echo "::group::$service"
+            (cd "$HOME/.docker-devbox/$service" && docker compose logs --tail 50) || true
+            echo "::endgroup::"
+          done
+
+  reinstall:
+    name: Reinstallation preserves state
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_DEVBOX_CURL_OPTS_GITHUB_API: -u x-access-token:${{ github.token }}
+      DOCKER_DEVBOX_DISABLE_PORTAINER: 1
+      DOCKER_DEVBOX_DISABLE_SMARTCD: 1
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install
+        run: |
+          ./installer
+          echo "$HOME/.docker-devbox/bin" >> "$GITHUB_PATH"
+
+      - name: Read the certificate authority fingerprint
+        run: |
+          cd "$HOME/.docker-devbox/cfssl"
+          fingerprint() {
+            docker compose exec -T intermediate cat /etc/cfssl/ca.pem \
+              | openssl x509 -noout -fingerprint -sha256 | cut -d= -f2
+          }
+
+          initial="$(fingerprint)"
+          test -n "$initial"
+          echo "INITIAL_CA=$initial" >> "$GITHUB_ENV"
+          echo "certificate authority: $initial"
+
+      - name: Seed local configuration and state
+        run: |
+          cd "$HOME/.docker-devbox"
+          echo "project: {acme_email: someone@example.com}" > traefik/ddb.local.yml
+          echo '{"letsencrypt": {"Certificates": ["kept"]}}' > traefik/acme.json
+          echo 'tls: {certificates: []}' > traefik/config/sample.test.ssl.toml
+          mkdir -p traefik/.certs
+          echo kept > traefik/.certs/sample.test.crt
+          echo "jsonnet: {docker: {expose: {port_prefix: 99}}}" > cfssl/ddb.local.yaml
+
+          # a local edit of a versioned file must be overwritten by the reinstallation
+          echo "# local edit" >> traefik/ddb.yml
+
+      - name: Check a reinstallation keeps it
+        run: |
+          ./installer
+
+          cd "$HOME/.docker-devbox/cfssl"
+          current="$(docker compose exec -T intermediate cat /etc/cfssl/ca.pem \
+            | openssl x509 -noout -fingerprint -sha256 | cut -d= -f2)"
+          test -n "$current"
+          echo "certificate authority: $current"
+
+          if [[ "$current" != "$INITIAL_CA" ]]; then
+            echo "the certificate authority must survive a reinstallation"
+            exit 1
+          fi
+
+      - name: Check a reinstallation keeps local configuration and state
+        run: |
+          cd "$HOME/.docker-devbox"
+
+          assert_kept() {
+            if [[ ! -e "$1" ]]; then
+              echo "missing: $1"
+              ls -la "$(dirname "$1")" || true
+              exit 1
+            fi
+            if ! grep -q "$2" "$1"; then
+              echo "content lost in $1"
+              cat "$1"
+              exit 1
+            fi
+            echo "kept: $1"
+          }
+
+          assert_kept traefik/ddb.local.yml someone@example.com
+          assert_kept traefik/acme.json '"kept"'
+          assert_kept traefik/config/sample.test.ssl.toml certificates
+          assert_kept traefik/.certs/sample.test.crt kept
+          assert_kept cfssl/ddb.local.yaml "port_prefix: 99"
+
+          # versioned files come back from the repository, and nothing is left behind
+          if grep -q "# local edit" traefik/ddb.yml; then
+            echo "versioned files must be refreshed from the repository"
+            exit 1
+          fi
+
+          if [[ -e .kept ]]; then
+            echo "the directory holding kept files must be cleaned up"
+            find .kept
+            exit 1
+          fi
+
+      - name: Check DOCKER_DEVBOX_RESET drops the authority and its certificates
+        run: |
+          DOCKER_DEVBOX_RESET=1 ./installer
+
+          cd "$HOME/.docker-devbox/cfssl"
+          current="$(docker compose exec -T intermediate cat /etc/cfssl/ca.pem \
+            | openssl x509 -noout -fingerprint -sha256 | cut -d= -f2)"
+          test -n "$current"
+          echo "certificate authority: $current"
+
+          if [[ "$current" == "$INITIAL_CA" ]]; then
+            echo "DOCKER_DEVBOX_RESET must issue a new certificate authority"
+            exit 1
+          fi
+
+          cd "$HOME/.docker-devbox"
+
+          assert_kept() {
+            if [[ ! -e "$1" ]] || ! grep -q "$2" "$1"; then
+              echo "$1 should have been kept"
+              exit 1
+            fi
+            echo "kept: $1"
+          }
+
+          assert_dropped() {
+            if [[ -e "$1" ]]; then
+              echo "$1 should have been dropped, it is signed by the previous authority"
+              exit 1
+            fi
+            echo "dropped: $1"
+          }
+
+          # local configuration still survives, certificates signed by the previous authority do not
+          assert_kept traefik/ddb.local.yml someone@example.com
+          assert_kept traefik/acme.json '"kept"'
+          assert_kept cfssl/ddb.local.yaml "port_prefix: 99"
+          assert_dropped traefik/config/sample.test.ssl.toml
+          assert_dropped traefik/.certs/sample.test.crt
+
+      - name: Dump logs
+        if: failure()
+        run: |
+          cat "$HOME/.docker-devbox/docker-devbox-installer.log" || true
+          docker ps -a || true
+          docker volume ls || true
+          (cd "$HOME/.docker-devbox/cfssl" && docker compose logs --tail 50) || true
+
+  certs:
+    name: Certificates generation
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_DEVBOX_CURL_OPTS_GITHUB_API: -u x-access-token:${{ github.token }}
+      DOCKER_DEVBOX_DISABLE_PORTAINER: 1
+      DOMAIN: devbox-test.test
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install
+        run: |
+          ./installer
+          echo "$HOME/.docker-devbox/bin" >> "$GITHUB_PATH"
+
+      - name: Configure the test project
+        run: |
+          project="$RUNNER_TEMP/project"
+          cp -a tests/project "$project"
+          echo "PROJECT=$project" >> "$GITHUB_ENV"
+          cd "$project"
+          ddb configure
+
+      - name: Check the certificate issued by cfssl
+        run: |
+          cd "$PROJECT"
+          test -f ".certs/$DOMAIN.crt"
+          test -f ".certs/$DOMAIN.key"
+
+          openssl x509 -in ".certs/$DOMAIN.crt" -noout -subject | grep -qE "CN *= *$DOMAIN"
+          openssl x509 -in ".certs/$DOMAIN.crt" -noout -ext subjectAltName | grep -q "DNS:$DOMAIN"
+          openssl x509 -in ".certs/$DOMAIN.crt" -noout -ext subjectAltName | grep -q "DNS:\*\.$DOMAIN"
+          openssl x509 -in ".certs/$DOMAIN.crt" -noout -checkend 0
+
+          # append_ca_certificate defaults to true, so the issuing CA is bundled with the certificate
+          test "$(grep -c 'BEGIN CERTIFICATE' ".certs/$DOMAIN.crt")" -ge 2
+
+          # the private key must match the certificate
+          diff <(openssl x509 -in ".certs/$DOMAIN.crt" -noout -pubkey) <(openssl pkey -in ".certs/$DOMAIN.key" -pubout)
+
+          openssl x509 -in ".certs/$DOMAIN.crt" -noout -subject -issuer -dates
+
+      - name: Check the certificate validity period
+        run: |
+          config="$GITHUB_WORKSPACE/services/cfssl/.docker/cfssl/etc/ca_intermediate_config.json"
+          hours="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['signing']['default']['expiry'].rstrip('h'))" "$config")"
+
+          # the certificate must be issued for the configured duration, minus the time already elapsed
+          openssl x509 -in "$PROJECT/.certs/$DOMAIN.crt" -noout -checkend "$(( hours * 3600 * 99 / 100 ))"
+          echo "certificate is valid for the configured $hours hours"
+
+      - name: Check the certificate is installed in traefik
+        run: |
+          test -f "$HOME/.docker-devbox/certs/$DOMAIN.crt"
+          test -f "$HOME/.docker-devbox/certs/$DOMAIN.key"
+          cmp "$PROJECT/.certs/$DOMAIN.crt" "$HOME/.docker-devbox/certs/$DOMAIN.crt"
+          grep -q "$DOMAIN" "$HOME/.docker-devbox/traefik/config/$DOMAIN.ssl.toml"
+
+      - name: Check https access through traefik
+        run: |
+          cd "$HOME/.docker-devbox/cfssl"
+          docker compose cp intermediate:/etc/cfssl/ca.pem "$RUNNER_TEMP/ca.pem"
+
+          cd "$PROJECT"
+          docker compose up -d --wait || docker compose up -d
+
+          for _ in $(seq 30); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' --cacert "$RUNNER_TEMP/ca.pem" \
+              --resolve "$DOMAIN:443:127.0.0.1" "https://$DOMAIN/" || true)"
+            [[ "$code" == "200" ]] && break
+            sleep 2
+          done
+
+          echo "https://$DOMAIN answered with status $code, certificate validated against the cfssl CA"
+          [[ "$code" == "200" ]]
+
+      - name: Dump logs
+        if: failure()
+        run: |
+          cat "$HOME/.docker-devbox/docker-devbox-installer.log" || true
+          docker ps -a || true
+          ls -la "$PROJECT/.certs" || true
+          cat "$HOME/.docker-devbox/traefik/config/$DOMAIN.ssl.toml" || true
+          echo | openssl s_client -connect 127.0.0.1:443 -servername "$DOMAIN" 2>&1 | head -30 || true
+          for service in traefik cfssl; do
+            echo "::group::$service"
+            (cd "$HOME/.docker-devbox/$service" && docker compose logs --tail 50) || true
+            echo "::endgroup::"
+          done
+          echo "::group::project"
+          (cd "$PROJECT" && docker compose logs --tail 50) || true
+          echo "::endgroup::"

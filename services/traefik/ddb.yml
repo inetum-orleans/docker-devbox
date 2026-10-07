@@ -1,0 +1,15 @@
+smartcd:
+  disabled: true
+traefik_dashboard:
+  enabled: true
+jsonnet:
+  docker:
+    expose:
+      port_prefix: 426
+    service:
+      restart: unless-stopped
+permissions:
+  specs:
+    acme.json: '600'
+project:
+  acme_email: dummy-acme-email@gfi.world  # This mail should be customized in ddb.local.yml to authenticate with letsencrypt servers

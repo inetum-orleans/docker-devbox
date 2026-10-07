@@ -1,0 +1,6 @@
+jsonnet:
+  docker:
+    service:
+      restart: unless-stopped
+smartcd:
+  disabled: true

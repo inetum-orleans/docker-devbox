@@ -3,8 +3,14 @@
 DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-$HOME/.docker-devbox}"
 DOCKER_DEVBOX_BIN="${DOCKER_DEVBOX_HOME}/bin"
 DOCKER_DEVBOX_DOT_BIN="${DOCKER_DEVBOX_HOME}/.bin"
+DOCKER_DEVBOX_SRC="${DOCKER_DEVBOX_HOME}/.src"
+DOCKER_DEVBOX_KEPT="${DOCKER_DEVBOX_HOME}/.kept"
 export DOCKER_DEVBOX_REVERSE_PROXY_NETWORK="${DOCKER_DEVBOX_REVERSE_PROXY_NETWORK:-reverse-proxy}"
 DOCKER_DEVBOX_DDB_ASSET_NAME="${DOCKER_DEVBOX_DDB_ASSET_NAME:-ddb-linux}"
+_DDB_DEFAULT_REPOSITORY="inetum-orleans/docker-devbox-ddb"
+DOCKER_DEVBOX_DDB_REPOSITORY="${DOCKER_DEVBOX_DDB_REPOSITORY:-$_DDB_DEFAULT_REPOSITORY}"
+DOCKER_DEVBOX_REPOSITORY="${DOCKER_DEVBOX_REPOSITORY:-https://github.com/inetum-orleans/docker-devbox.git}"
+DOCKER_DEVBOX_BRANCH="${DOCKER_DEVBOX_BRANCH:-master}"
 
 if [[ -n "${DOCKER_DEVBOX_CI}" ]]; then
   DOCKER_DEVBOX_MINIMAL=1
@@ -13,9 +19,9 @@ fi
 
 if [[ -z "${DOCKER_DEVBOX_MINIMAL}" ]]; then
   DOCKER_DEVBOX_SMARTCD_BRANCH="${DOCKER_DEVBOX_SMARTCD_BRANCH:-master}"
-  DOCKER_DEVBOX_CFSSL_BRANCH="${DOCKER_DEVBOX_CFSSL_BRANCH:-master}"
-  DOCKER_DEVBOX_PORTAINER_BRANCH="${DOCKER_DEVBOX_PORTAINER_BRANCH:-master}"
-  DOCKER_DEVBOX_TRAEFIK_BRANCH="${DOCKER_DEVBOX_TRAEFIK_BRANCH:-master}"
+  DOCKER_DEVBOX_CFSSL_ENABLED=1
+  DOCKER_DEVBOX_PORTAINER_ENABLED=1
+  DOCKER_DEVBOX_TRAEFIK_ENABLED=1
 fi
 
 if [[ -n "${DOCKER_DEVBOX_DISABLE_SMARTCD}" ]]; then
@@ -23,15 +29,23 @@ if [[ -n "${DOCKER_DEVBOX_DISABLE_SMARTCD}" ]]; then
 fi
 
 if [[ -n "${DOCKER_DEVBOX_DISABLE_CFSSL}" ]]; then
-  DOCKER_DEVBOX_CFSSL_BRANCH=""
+  DOCKER_DEVBOX_CFSSL_ENABLED=""
 fi
 
 if [[ -n "${DOCKER_DEVBOX_DISABLE_PORTAINER}" ]]; then
-  DOCKER_DEVBOX_PORTAINER_BRANCH=""
+  DOCKER_DEVBOX_PORTAINER_ENABLED=""
 fi
 
 if [[ -n "${DOCKER_DEVBOX_DISABLE_REVERSE_PROXY}" ]]; then
-  DOCKER_DEVBOX_TRAEFIK_BRANCH=""
+  DOCKER_DEVBOX_TRAEFIK_ENABLED=""
+fi
+
+# Services are shipped in this repository. When the installer runs from a checkout, use it as is,
+# otherwise clone the repository into a cache directory.
+if [[ -f "${BASH_SOURCE[0]}" ]] && [[ -d "$(dirname "${BASH_SOURCE[0]}")/services" ]]; then
+  DOCKER_DEVBOX_SOURCES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+else
+  DOCKER_DEVBOX_SOURCES=""
 fi
 
 mkdir -p "${DOCKER_DEVBOX_HOME}"
@@ -93,6 +107,165 @@ _install_package_if_missing() {
   fi
 }
 
+_fetch_sources() {
+  if [[ -n "$DOCKER_DEVBOX_SOURCES" ]]; then
+    return 0
+  fi
+
+  echo "Download docker-devbox sources ($DOCKER_DEVBOX_BRANCH)" 2>&1 |& tee -a "$_LOG"
+  rm -rf "$DOCKER_DEVBOX_SRC" &>> "$_LOG"
+  if ! git clone --depth 1 -b "$DOCKER_DEVBOX_BRANCH" "$DOCKER_DEVBOX_REPOSITORY" "$DOCKER_DEVBOX_SRC" &>> "$_LOG"; then
+    echo "Can't clone $DOCKER_DEVBOX_REPOSITORY ($DOCKER_DEVBOX_BRANCH)." 2>&1 | tee -a "$_LOG"
+    exit 1
+  fi
+
+  DOCKER_DEVBOX_SOURCES="$DOCKER_DEVBOX_SRC"
+}
+
+# ddb self-update reads the repository from core.github_repository, keep it aligned with the installed binary.
+_configure_ddb_repository() {
+  local CONFIG="${DOCKER_DEVBOX_HOME}/ddb.yml"
+
+  if [[ -e "${DOCKER_DEVBOX_HOME}/ddb.yaml" ]]; then
+    CONFIG="${DOCKER_DEVBOX_HOME}/ddb.yaml"
+  fi
+
+  if [[ ! -e "$CONFIG" ]]; then
+    if [[ "$DOCKER_DEVBOX_DDB_REPOSITORY" == "$_DDB_DEFAULT_REPOSITORY" ]]; then
+      return 0
+    fi
+
+    echo "Configure ddb to self-update from ${DOCKER_DEVBOX_DDB_REPOSITORY}" 2>&1 |& tee -a "$_LOG"
+    cat << EOF > "$CONFIG"
+core:
+  github_repository: $DOCKER_DEVBOX_DDB_REPOSITORY
+EOF
+    return 0
+  fi
+
+  if awk -v repository="$DOCKER_DEVBOX_DDB_REPOSITORY" '
+    BEGIN { in_core = 0; inline_core = 0; done = 0 }
+    !done && /^core:[ \t]*$/ { in_core = 1; print; next }
+    !done && /^core:[ \t]*[^ \t]/ { inline_core = 1; print; next }
+    in_core && /^[ \t]+github_repository:[ \t]*/ {
+      match($0, /^[ \t]+/)
+      print substr($0, 1, RLENGTH) "github_repository: " repository
+      in_core = 0; done = 1; next
+    }
+    in_core && /^[^ \t]/ { print "  github_repository: " repository; in_core = 0; done = 1 }
+    { print }
+    END {
+      if (in_core) { print "  github_repository: " repository; done = 1 }
+      if (!done && !inline_core) { print "core:"; print "  github_repository: " repository; done = 1 }
+      if (!done) { exit 2 }
+    }
+  ' "$CONFIG" > "$CONFIG.tmp"; then
+    if ! cmp -s "$CONFIG" "$CONFIG.tmp"; then
+      echo "Configure ddb to self-update from ${DOCKER_DEVBOX_DDB_REPOSITORY}" 2>&1 |& tee -a "$_LOG"
+      mv "$CONFIG.tmp" "$CONFIG"
+    else
+      rm -f "$CONFIG.tmp"
+    fi
+  else
+    rm -f "$CONFIG.tmp"
+    echo "Set core.github_repository to ${DOCKER_DEVBOX_DDB_REPOSITORY} in $CONFIG for ddb self-update to use the same repository." 2>&1 | tee -a "$_LOG"
+  fi
+}
+
+# Paths of a service directory that hold local configuration or state, and are worth surviving a reinstallation.
+_service_kept_paths() {
+  local SERVICE="$1"
+
+  echo "ddb.local.yml"
+  echo "ddb.local.yaml"
+
+  if [[ "$SERVICE" == "traefik" ]]; then
+    echo "acme.json"
+  fi
+
+  # Those certificates are signed by the certificate authority, and are meaningless once it is reissued.
+  if [[ -z "${DOCKER_DEVBOX_RESET}" ]]; then
+    echo ".certs"
+
+    if [[ "$SERVICE" == "traefik" ]]; then
+      echo "config"
+    fi
+  fi
+}
+
+_keep_service_files() {
+  local SERVICE="$1"
+  local TARGET="$DOCKER_DEVBOX_HOME/$SERVICE"
+  local KEPT="$DOCKER_DEVBOX_KEPT/$SERVICE"
+  local KEPT_PATH
+
+  rm -rf "$KEPT" &>> "$_LOG"
+
+  while read -r KEPT_PATH; do
+    if [[ ! -e "$TARGET/$KEPT_PATH" ]]; then
+      continue
+    fi
+
+    echo "Keep $SERVICE/$KEPT_PATH" 2>&1 |& tee -a "$_LOG"
+    mkdir -p "$KEPT/$(dirname "$KEPT_PATH")" &>> "$_LOG"
+    cp -a "$TARGET/$KEPT_PATH" "$KEPT/$KEPT_PATH" &>> "$_LOG"
+  done < <(_service_kept_paths "$SERVICE")
+}
+
+_restore_service_files() {
+  local SERVICE="$1"
+  local TARGET="$DOCKER_DEVBOX_HOME/$SERVICE"
+  local KEPT="$DOCKER_DEVBOX_KEPT/$SERVICE"
+
+  if [[ ! -d "$KEPT" ]]; then
+    return 0
+  fi
+
+  cp -a "$KEPT/." "$TARGET/" &>> "$_LOG"
+  rm -rf "$KEPT" &>> "$_LOG"
+  rmdir "$DOCKER_DEVBOX_KEPT" &> /dev/null || true
+}
+
+_uninstall_service() {
+  local SERVICE="$1"
+  local TARGET="$DOCKER_DEVBOX_HOME/$SERVICE"
+
+  if [[ ! -d "$TARGET" ]]; then
+    return 0
+  fi
+
+  _keep_service_files "$SERVICE"
+
+  echo "Stop $SERVICE" 2>&1 |& tee -a "$_LOG"
+  cd "$TARGET" &>> "$_LOG"
+
+  if [[ -n "${DOCKER_DEVBOX_RESET}" ]]; then
+    echo "Remove $SERVICE volumes" 2>&1 |& tee -a "$_LOG"
+    docker compose down --remove-orphans --volumes &>> "$_LOG"
+  else
+    docker compose down --remove-orphans &>> "$_LOG"
+  fi
+
+  cd "$HOME" &>> "$_LOG"
+  rm -rf "$TARGET" &>> "$_LOG"
+}
+
+_copy_service() {
+  local SERVICE="$1"
+  local TARGET="$DOCKER_DEVBOX_HOME/$SERVICE"
+
+  _fetch_sources
+
+  if [[ ! -d "$DOCKER_DEVBOX_SOURCES/services/$SERVICE" ]]; then
+    echo "Service $SERVICE not found in $DOCKER_DEVBOX_SOURCES/services." 2>&1 | tee -a "$_LOG"
+    exit 1
+  fi
+
+  mkdir -p "$TARGET" &>> "$_LOG"
+  cp -a "$DOCKER_DEVBOX_SOURCES/services/$SERVICE/." "$TARGET/" &>> "$_LOG"
+  _restore_service_files "$SERVICE"
+}
+
 _install_package_if_missing "git"
 _install_package_if_missing "make"
 
@@ -127,35 +300,54 @@ fi
 
 export PATH="$DOCKER_DEVBOX_BIN:$PATH"
 
-if [[ -n "${DOCKER_DEVBOX_DDB_VERSION}" ]]; then
-  echo "Downloading ddb version ${DOCKER_DEVBOX_DDB_VERSION}" 2>&1 |& tee -a "$_LOG"
-  DOCKER_DEVBOX_BIN_URL="https://github.com/inetum-orleans/docker-devbox-ddb/releases/download/${DOCKER_DEVBOX_DDB_VERSION}/${DOCKER_DEVBOX_DDB_ASSET_NAME}"
-else
-  echo "Downloading ddb latest release" 2>&1 |& tee -a "$_LOG"
-  DOCKER_DEVBOX_BIN_URL=$(curl -fsSL $DOCKER_DEVBOX_CURL_OPTS_GITHUB_API https://api.github.com/repos/inetum-orleans/docker-devbox-ddb/releases/latest \
-  | grep "browser_download_url.*/$DOCKER_DEVBOX_DDB_ASSET_NAME\"" \
-  | cut -d : -f 2,3 \
-  | tr -d \")
-
-  if [[ -z "${DOCKER_DEVBOX_BIN_URL}" ]]; then
-    # Github API may fail, most commonly because of unauthenticated rate limit.
-    # Use git to retrieve latest release tag and build url manually.
-    DOCKER_DEVBOX_LATEST_RELEASE=$(git -c 'versionsort.suffix=-' \
-        ls-remote --exit-code --refs --sort='version:refname' --tags https://github.com/inetum-orleans/docker-devbox-ddb 'v*.*.*' \
-        | tail --lines=1 \
-        | cut --delimiter='/' --fields=3)
-
-    if [[ -z "${DOCKER_DEVBOX_LATEST_RELEASE}" ]]; then
-        echo "Can't find docker-devbox-ddb last release." 2>&1 | tee -a "$_LOG"
-        exit 1
-    fi
-
-    DOCKER_DEVBOX_BIN_URL="https://github.com/inetum-orleans/docker-devbox-ddb/releases/download/${DOCKER_DEVBOX_LATEST_RELEASE}/${DOCKER_DEVBOX_DDB_ASSET_NAME}"
+if [[ -n "${DOCKER_DEVBOX_DISABLE_DDB}" ]]; then
+  if [[ ! -x "$DOCKER_DEVBOX_BIN/ddb" ]] && [[ ! -x "$(command -v ddb)" ]]; then
+    echo "ddb download is disabled, but no ddb binary is available. Install one in $DOCKER_DEVBOX_BIN or unset DOCKER_DEVBOX_DISABLE_DDB." 2>&1 | tee -a "$_LOG"
+    exit 1
   fi
+
+  echo "ddb download is disabled, keeping $(command -v ddb)" 2>&1 |& tee -a "$_LOG"
+else
+  if [[ -n "${DOCKER_DEVBOX_DDB_URL}" ]]; then
+    echo "Downloading ddb from ${DOCKER_DEVBOX_DDB_URL}" 2>&1 |& tee -a "$_LOG"
+    DOCKER_DEVBOX_BIN_URL="${DOCKER_DEVBOX_DDB_URL}"
+  elif [[ -n "${DOCKER_DEVBOX_DDB_VERSION}" ]]; then
+    echo "Downloading ddb version ${DOCKER_DEVBOX_DDB_VERSION} from ${DOCKER_DEVBOX_DDB_REPOSITORY}" 2>&1 |& tee -a "$_LOG"
+    DOCKER_DEVBOX_BIN_URL="https://github.com/${DOCKER_DEVBOX_DDB_REPOSITORY}/releases/download/${DOCKER_DEVBOX_DDB_VERSION}/${DOCKER_DEVBOX_DDB_ASSET_NAME}"
+  else
+    echo "Downloading ddb latest release from ${DOCKER_DEVBOX_DDB_REPOSITORY}" 2>&1 |& tee -a "$_LOG"
+    DOCKER_DEVBOX_BIN_URL=$(curl -fsSL $DOCKER_DEVBOX_CURL_OPTS_GITHUB_API "https://api.github.com/repos/${DOCKER_DEVBOX_DDB_REPOSITORY}/releases/latest" \
+    | grep "browser_download_url.*/$DOCKER_DEVBOX_DDB_ASSET_NAME\"" \
+    | cut -d : -f 2,3 \
+    | tr -d ' "')
+
+    if [[ -z "${DOCKER_DEVBOX_BIN_URL}" ]]; then
+      # Github API may fail, most commonly because of unauthenticated rate limit.
+      # Use git to retrieve latest release tag and build url manually.
+      DOCKER_DEVBOX_LATEST_RELEASE=$(git -c 'versionsort.suffix=-' \
+          ls-remote --exit-code --refs --sort='version:refname' --tags "https://github.com/${DOCKER_DEVBOX_DDB_REPOSITORY}" 'v*.*.*' \
+          | tail --lines=1 \
+          | cut --delimiter='/' --fields=3)
+
+      if [[ -z "${DOCKER_DEVBOX_LATEST_RELEASE}" ]]; then
+          echo "Can't find ${DOCKER_DEVBOX_DDB_REPOSITORY} last release." 2>&1 | tee -a "$_LOG"
+          exit 1
+      fi
+
+      DOCKER_DEVBOX_BIN_URL="https://github.com/${DOCKER_DEVBOX_DDB_REPOSITORY}/releases/download/${DOCKER_DEVBOX_LATEST_RELEASE}/${DOCKER_DEVBOX_DDB_ASSET_NAME}"
+    fi
+  fi
+
+  if ! curl -fsSL -o "$DOCKER_DEVBOX_BIN/ddb" "$DOCKER_DEVBOX_BIN_URL"; then
+    rm -f "$DOCKER_DEVBOX_BIN/ddb"
+    echo "Can't download ddb from $DOCKER_DEVBOX_BIN_URL." 2>&1 | tee -a "$_LOG"
+    exit 1
+  fi
+
+  chmod +x "$DOCKER_DEVBOX_BIN/ddb"
 fi
 
-curl -fsSL -o "$DOCKER_DEVBOX_BIN/ddb" $DOCKER_DEVBOX_BIN_URL
-chmod +x "$DOCKER_DEVBOX_BIN/ddb"
+_configure_ddb_repository
 
 if [[ -z "${DOCKER_DEVBOX_DISABLE_OPTIONAL_DEPENDENCIES}" ]]; then
     _MKCERT_VERSION=$(curl -fsSL $DOCKER_DEVBOX_CURL_OPTS_GITHUB_API https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep 'tag_name' | cut -d\" -f4)
@@ -231,19 +423,16 @@ fi
 
 # Traefik
 if [[ -d "$DOCKER_DEVBOX_HOME/traefik" ]]; then
-    echo "Traefik : removing existing traefik installation" &>> "$_LOG"
-    echo "Stop traefik" 2>&1 |& tee -a "$_LOG"
-    cd "$DOCKER_DEVBOX_HOME/traefik" &>> "$_LOG"
-    docker compose down --remove-orphans --volumes &>> "$_LOG"
-    cd $HOME &>> "$_LOG"
-    rm -rf "$DOCKER_DEVBOX_HOME"/traefik &>> "$_LOG"
-    rm -rf "$DOCKER_DEVBOX_HOME"/certs &>> "$_LOG"
+    _uninstall_service traefik
+
+    if [[ -n "${DOCKER_DEVBOX_RESET}" ]]; then
+      rm -rf "$DOCKER_DEVBOX_HOME"/certs &>> "$_LOG"
+    fi
 fi
 
-if [[ -n "${DOCKER_DEVBOX_TRAEFIK_BRANCH}" ]]; then
-
+if [[ -n "${DOCKER_DEVBOX_TRAEFIK_ENABLED}" ]]; then
     echo "Use traefik as reverse proxy" 2>&1 |& tee -a "$_LOG"
-    git clone -b ${DOCKER_DEVBOX_TRAEFIK_BRANCH} https://github.com/inetum-orleans/docker-devbox-traefik.git "$DOCKER_DEVBOX_HOME/traefik" &>> "$_LOG"
+    _copy_service traefik
     cd "${DOCKER_DEVBOX_HOME}"/traefik &>> "$_LOG"
     echo "Install traefik" 2>&1 |& tee -a "$_LOG"
     touch acme.json
@@ -258,45 +447,33 @@ else
 fi
 
 # CFSSL
-if [[ -d "$DOCKER_DEVBOX_HOME/cfssl" ]]; then
-    echo "CFSSL : removing existing cfssl installation" &>> "$_LOG"
-    echo "Stop CFSSL" 2>&1 |& tee -a "$_LOG"
-    cd "$DOCKER_DEVBOX_HOME/cfssl" &>> "$_LOG"
-    docker compose down --remove-orphans --volumes &>> "$_LOG"
-    cd $HOME &>> "$_LOG"
-    rm -rf "$DOCKER_DEVBOX_HOME"/cfssl &>> "$_LOG"
-fi
+_uninstall_service cfssl
 
-if [[ -n "${DOCKER_DEVBOX_CFSSL_BRANCH}" ]]; then
+if [[ -n "${DOCKER_DEVBOX_CFSSL_ENABLED}" ]]; then
     echo "Install CFSSL" 2>&1 |& tee -a "$_LOG"
-    git clone -b ${DOCKER_DEVBOX_CFSSL_BRANCH} https://github.com/inetum-orleans/docker-devbox-cfssl.git "$DOCKER_DEVBOX_HOME/cfssl" &>> "$_LOG"
+    _copy_service cfssl
     cd "${DOCKER_DEVBOX_HOME}"/cfssl &>> "$_LOG"
     ddb configure &>> "$_LOG"
     docker compose pull &>> "$_LOG"
     echo "Start CFSSL" 2>&1 |& tee -a "$_LOG"
     docker compose up --build -d &>> "$_LOG"
+    cd $HOME &>> "$_LOG"
 else
     echo "CFSSL is disabled" 2>&1 |& tee -a "$_LOG"
 fi
 
 # Portainer
-if [[ -d "$DOCKER_DEVBOX_HOME/portainer" ]]; then
-    echo "Portainer : removing existing portainer installation" &>> "$_LOG"
-    echo "Stop portainer" 2>&1 |& tee -a "$_LOG"
-    cd "$DOCKER_DEVBOX_HOME/portainer" &>> "$_LOG"
-    docker compose down --remove-orphans --volumes &>> "$_LOG"
-    cd $HOME &>> "$_LOG"
-    rm -rf "$DOCKER_DEVBOX_HOME"/portainer &>> "$_LOG"
-fi
+_uninstall_service portainer
 
-if [[ -n "${DOCKER_DEVBOX_PORTAINER_BRANCH}" ]]; then
+if [[ -n "${DOCKER_DEVBOX_PORTAINER_ENABLED}" ]]; then
     echo "Install portainer" 2>&1 |& tee -a "$_LOG"
-    git clone -b ${DOCKER_DEVBOX_PORTAINER_BRANCH} https://github.com/inetum-orleans/docker-devbox-portainer.git "$DOCKER_DEVBOX_HOME/portainer" &>> "$_LOG"
+    _copy_service portainer
     cd "${DOCKER_DEVBOX_HOME}"/portainer &>> "$_LOG"
     ddb configure &>> "$_LOG" || true
     docker compose pull &>> "$_LOG" || true
     echo "Start portainer" 2>&1 |& tee -a "$_LOG"
     docker compose up --build -d &>> "$_LOG"
+    cd $HOME &>> "$_LOG"
 else
     echo "Portainer is disabled" 2>&1 |& tee -a "$_LOG"
 fi

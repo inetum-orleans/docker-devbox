@@ -11,6 +11,21 @@ then
 fi
 
 DOCKER_DEVBOX_HOME="${DOCKER_DEVBOX_HOME:-$HOME/.docker-devbox}"
+DOCKER_DEVBOX_SRC="${DOCKER_DEVBOX_HOME}/.src"
+DOCKER_DEVBOX_REPOSITORY="${DOCKER_DEVBOX_REPOSITORY:-https://github.com/inetum-orleans/docker-devbox.git}"
+DOCKER_DEVBOX_BRANCH="${DOCKER_DEVBOX_BRANCH:-master}"
+
+if [[ -f "${BASH_SOURCE[0]}" ]] && [[ -d "$(dirname "${BASH_SOURCE[0]}")/services" ]]; then
+    DOCKER_DEVBOX_SOURCES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+elif [[ -d "${DOCKER_DEVBOX_SRC}/.git" ]]; then
+    git -C "${DOCKER_DEVBOX_SRC}" fetch --depth 1 origin "${DOCKER_DEVBOX_BRANCH}" &&\
+    git -C "${DOCKER_DEVBOX_SRC}" reset --hard FETCH_HEAD || exit 1
+    DOCKER_DEVBOX_SOURCES="${DOCKER_DEVBOX_SRC}"
+else
+    rm -rf "${DOCKER_DEVBOX_SRC}"
+    git clone --depth 1 -b "${DOCKER_DEVBOX_BRANCH}" "${DOCKER_DEVBOX_REPOSITORY}" "${DOCKER_DEVBOX_SRC}" || exit 1
+    DOCKER_DEVBOX_SOURCES="${DOCKER_DEVBOX_SRC}"
+fi
 
 ddb self-update
 
@@ -18,9 +33,9 @@ SERVICES=("cfssl" "portainer" "traefik")
 for SERVICE in "${SERVICES[@]}"; do
     if [[ -d "${DOCKER_DEVBOX_HOME}/${SERVICE}" ]]
     then
+        cp -a "${DOCKER_DEVBOX_SOURCES}/services/${SERVICE}/." "${DOCKER_DEVBOX_HOME}/${SERVICE}/" &&\
         cd "${DOCKER_DEVBOX_HOME}/${SERVICE}" &&\
-        git pull &&\
         ddb configure &&\
-        docker compose up -d --pull always
+        docker compose up -d --build --pull always
     fi
 done

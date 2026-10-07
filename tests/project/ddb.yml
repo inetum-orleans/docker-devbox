@@ -1,0 +1,12 @@
+core:
+  project:
+    name: devbox-test
+  domain:
+    sub: devbox-test
+    ext: test
+  # the update check queries the github api unauthenticated, which gets rate limited on shared CI runners
+  check_updates: false
+jsonnet:
+  docker:
+    service:
+      restart: "no"

@@ -1,0 +1,17 @@
+#!/bin/sh
+# Copyright 2016-2017 LasLabs Inc.
+# License Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0.html).
+
+set -e
+
+cfssl gencert -initca "/etc/cfssl/${CFSSL_CSR}" | cfssljson -bare ca
+
+until curl -sf -d '{"label": "primary"}' "${CA_ROOT_URI}/api/v1/cfssl/info" > /dev/null; do
+    echo "Root CA is unavailable - sleeping." >&2
+    sleep 1
+done
+echo "Root CA is ready - resuming." >&2
+
+jq -Rs '{certificate_request: .}' < ca.csr \
+    | curl -sf -d @- "${CA_ROOT_URI}/api/v1/cfssl/sign" \
+    | jq -er '.result.certificate' > ca.pem

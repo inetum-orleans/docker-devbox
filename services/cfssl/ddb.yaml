@@ -1,0 +1,10 @@
+smartcd:
+  disabled: true
+jsonnet:
+  docker:
+    expose:
+      port_prefix: 77
+    service:
+      restart: unless-stopped
+project:
+  chain: false
